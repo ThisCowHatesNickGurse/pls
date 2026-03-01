@@ -37,8 +37,7 @@ local Serializer = require(script:WaitForChild("ModuleScript"))
 --------------------------------------------------------------------
 local morphFolder = ReplicatedStorage:FindFirstChild("Morphs") or Instance.new("Folder", ReplicatedStorage)
 morphFolder.Name = "Morphs"
-local animsFolder = ServerStorage:FindFirstChild("SortedAnims") or Instance.new("Folder", ServerStorage)
-animsFolder.Name = "SortedAnims"
+local animsFolder = ServerStorage:WaitForChild("SortedAnims")
 local hatsFolder = ServerStorage:FindFirstChild("HatMorphs") or Instance.new("Folder", ServerStorage)
 hatsFolder.Name = "HatMorphs"
 
@@ -677,8 +676,7 @@ local Maps = {
 	["Icebound"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/cc"
 }
 
-local ANIM_URL = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/v4anims.txt"
-pcall(function() Serializer.Animation.LoadFromURL(ANIM_URL, game.ServerStorage) end)
+
 
 local GAME_TIME = 600
 local VOTE_TIME = 15
