@@ -545,7 +545,8 @@ local function CleanupFinisher(finisherId)
 			if vPlayer:IsA("Player") then GiveSword(vPlayer) end
 		end
 	end
-
+	vHrp.Parent.Humanoid.AutoRotate = true
+	fHrp.Parent.Humanoid.AutoRotate = true
 	ActiveFinishers[finisherId] = nil
 end
 
@@ -635,6 +636,7 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local victimPos
 
 	vHrp.Parent.Humanoid.AutoRotate = false
+	fHrp.Parent.Humanoid.AutoRotate = false
 	vHrp.CFrame = fHrp.CFrame
 
 	local data = {
