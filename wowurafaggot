@@ -35,7 +35,6 @@ local Serializer = require(script:WaitForChild("ModuleScript"))
 --------------------------------------------------------------------
 -- FOLDERS & REMOTE EVENTS
 --------------------------------------------------------------------
--- Failsafe for folders if they don't exist yet
 local morphFolder = ReplicatedStorage:FindFirstChild("Morphs") or Instance.new("Folder", ReplicatedStorage)
 morphFolder.Name = "Morphs"
 local animsFolder = ServerStorage:FindFirstChild("SortedAnims") or Instance.new("Folder", ServerStorage)
@@ -60,12 +59,61 @@ local UpdateVotesEvent = getOrCreateRemote("RemoteEvent", "UpdateVotesEvent", Re
 local TimerUpdateEvent = getOrCreateRemote("RemoteEvent", "TimerUpdateEvent", ReplicatedStorage)
 
 --------------------------------------------------------------------
--- FINISHER & MORPHING GAME LOGIC / STATE
+-- GLOBAL GAME STATE
 --------------------------------------------------------------------
+local isGameActive = false
+local isVoting = false
+local voteTimeLeft = 0
+local activeMapModel = nil
+
 local PlayerIdentity = {}     
 local ActiveFinishers = {}
 local PlayerDummies = {} 
 
+--------------------------------------------------------------------
+-- SWORD MANAGEMENT SYSTEM
+--------------------------------------------------------------------
+local function RemoveSword(player)
+	if not player then return end
+	local char = player.Character
+	if char then
+		local tool = char:FindFirstChild("Sword")
+		if tool then tool:Destroy() end
+	end
+	local backpack = player:FindFirstChild("Backpack")
+	if backpack then
+		local tool = backpack:FindFirstChild("Sword")
+		if tool then tool:Destroy() end
+	end
+end
+
+local function GiveSword(player)
+	-- Only give the sword if the game is active and they aren't ragdolled or in a finisher
+	if not isGameActive then return end
+	if not player or not player.Character then return end
+	
+	local char = player.Character
+	if char:GetAttribute("IsRagdolled") or char:GetAttribute("InFinisher") then return end
+	
+	local backpack = player:FindFirstChild("Backpack")
+	if not backpack then return end
+	
+	-- Don't give them a second sword if they already have one
+	if char:FindFirstChild("Sword") or backpack:FindFirstChild("Sword") then return end
+	
+	-- Fetch the sword from ServerStorage
+	local swordTemplate = ServerStorage:FindFirstChild("Sword") or ReplicatedStorage:FindFirstChild("Sword")
+	if swordTemplate and swordTemplate:IsA("Tool") then
+		local newSword = swordTemplate:Clone()
+		newSword.Parent = backpack
+	else
+		warn("WARNING: You must put a Tool named 'Sword' into ServerStorage for the loadout system to work!")
+	end
+end
+
+--------------------------------------------------------------------
+-- IDENTITY / OVERHEAD SYSTEM
+--------------------------------------------------------------------
 local function genderCategory(val)
 	if not val then return "neutral" end
 	local s = tostring(val):lower()
@@ -469,6 +517,11 @@ local function CleanupFinisher(finisherId)
 		if fHrp then fHrp.Anchored = false end
 		fChar:SetAttribute("Invincible", false)
 		fChar:SetAttribute("InFinisher", false)
+		
+		-- Give Sword back to the finisher if game is active
+		if not fChar:GetAttribute("IsRagdolled") then
+			GiveSword(fPlayer)
+		end
 	end
 
 	if vChar then
@@ -484,6 +537,9 @@ local function CleanupFinisher(finisherId)
 
 		if vHum and vHum.Health <= 75 or data.Finished then
 			Ragdoll.RagdollCharacter(vChar)
+		else
+			-- If they somehow survived unragdolled, give sword back
+			if vPlayer:IsA("Player") then GiveSword(vPlayer) end
 		end
 	end
 
@@ -504,6 +560,10 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local vHum = vChar:FindFirstChild("Humanoid")
 
 	if not fHrp or not vHrp or not fHum or not vHum then return end
+
+	-- TAKE AWAY SWORDS
+	RemoveSword(finisherPlayer)
+	if victimPlayer:IsA("Player") then RemoveSword(victimPlayer) end
 
 	Ragdoll.UnRagdollCharacter(vChar)
 
@@ -626,10 +686,6 @@ local VOTE_TIME = 15
 local votes = {}
 local tallies = {}
 local validOptions = {}
-local activeMapModel = nil
-local isGameActive = false
-local isVoting = false
-local voteTimeLeft = 0
 
 local function teleportPlayersTo(spawnFolder, playersToMove)
 	if not spawnFolder then return end
@@ -661,6 +717,7 @@ local function setupHealthListener(character)
 	local humanoid = character:WaitForChild("Humanoid")
 	local currentHP = humanoid.Health
 	local isReverting = false
+	local ownerPlayer = Players:GetPlayerFromCharacter(character)
 
 	humanoid.HealthChanged:Connect(function(hp)
 		if isReverting then return end
@@ -676,6 +733,7 @@ local function setupHealthListener(character)
 
 		currentHP = humanoid.Health
 
+		-- UNRAGDOLL TRIGGER
 		if hp >= 100 and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") then
 			character:SetAttribute("IsRagdolled", false)
 			character:SetAttribute("Invincible", false)
@@ -684,6 +742,7 @@ local function setupHealthListener(character)
 			humanoid.WalkSpeed = 16 
 
 			Ragdoll.UnRagdollCharacter(character)
+			GiveSword(ownerPlayer) -- Give back sword when unragdolled
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
 			if hrp then
@@ -692,6 +751,7 @@ local function setupHealthListener(character)
 			end
 		end
 
+		-- RAGDOLL TRIGGER
 		if hp > 0 and hp <= 75 and not character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") then
 			character:SetAttribute("IsRagdolled", true)
 			character:SetAttribute("Invincible", true)
@@ -700,6 +760,7 @@ local function setupHealthListener(character)
 			humanoid.WalkSpeed = 0
 
 			Ragdoll.RagdollCharacter(character)
+			RemoveSword(ownerPlayer) -- Take away sword when knocked down
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
 			local prompt = Instance.new("ProximityPrompt")
@@ -709,8 +770,6 @@ local function setupHealthListener(character)
 			prompt.HoldDuration = 0.5
 			prompt.RequiresLineOfSight = false
 			if hrp then prompt.Parent = hrp end
-
-			local ownerPlayer = Players:GetPlayerFromCharacter(character)
 
 			prompt.Triggered:Connect(function(finisherPlayer)
 				local fChar = finisherPlayer.Character
@@ -753,7 +812,7 @@ local function setupPlayer(player)
 		wait(2)
 		print("[SPAWN DEBUG] CharacterAdded fired for:", player.Name)
 
-		-- 1. Wait for the crucial character parts to load first!
+		-- Wait for the crucial character parts to load first
 		local hum = c:WaitForChild("Humanoid", 10)
 		local hrp = c:WaitForChild("HumanoidRootPart", 10)
 		local head = c:WaitForChild("Head", 10)
@@ -771,7 +830,7 @@ local function setupPlayer(player)
 		updateOverheadName(c, player.DisplayName)
 		task.spawn(setupHealthListener, c)
 
-		-- 2. Map Voting & Spawn Teleport logic
+		-- Map Voting & Spawn Teleport logic
 		if isVoting and voteTimeLeft > 0 then
 			VoteStartEvent:FireClient(player, validOptions, voteTimeLeft)
 		end
@@ -781,8 +840,10 @@ local function setupPlayer(player)
 		if isGameActive and activeMapModel and activeMapModel:FindFirstChild("Spawns") then
 			print("[SPAWN DEBUG] Teleporting to Active Map Spawns.")
 			teleportPlayersTo(activeMapModel.Spawns, {player})
+			GiveSword(player) -- Respawn logic: give sword if game is active
 		else
 			print("[SPAWN DEBUG] Attempting to teleport to Lobby Spawns...")
+			RemoveSword(player) -- Take away sword if in lobby
 			local lobby = workspace:FindFirstChild("Lobby")
 			if not lobby then
 				warn("[SPAWN DEBUG ERROR] There is no model/folder named 'Lobby' in the Workspace!")
@@ -798,6 +859,7 @@ local function setupPlayer(player)
 			end
 		end
 	end)
+	
 	-- Check for pre-existing character on late joins
 	if player.Character and player.Character.Parent then
 		task.spawn(function()
@@ -926,6 +988,11 @@ task.spawn(function()
 
 		if activeMapModel and activeMapModel:FindFirstChild("Spawns") then
 			teleportPlayersTo(activeMapModel.Spawns, Players:GetPlayers())
+			
+			-- Give Swords to everyone teleported into the map
+			for _, p in ipairs(Players:GetPlayers()) do
+				GiveSword(p)
+			end
 		end
 
 		for i = (GAME_TIME - VOTE_TIME), 0, -1 do
@@ -935,6 +1002,8 @@ task.spawn(function()
 			task.wait(1)
 		end
 
+		isGameActive = false
+		
 		if activeMapModel then
 			activeMapModel:Destroy()
 			activeMapModel = nil
@@ -942,5 +1011,10 @@ task.spawn(function()
 
 		local lobbySpawns = workspace:FindFirstChild("Lobby") and workspace.Lobby:FindFirstChild("Spawns")
 		teleportPlayersTo(lobbySpawns, Players:GetPlayers())
+		
+		-- Remove Swords from everyone back in the lobby
+		for _, p in ipairs(Players:GetPlayers()) do
+			RemoveSword(p)
+		end
 	end
 end)
