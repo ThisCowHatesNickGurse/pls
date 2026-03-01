@@ -371,9 +371,9 @@ local function pickMorphTemplateForCharacter(character)
 		local alt = hatsFolder:FindFirstChild("Male") or morphFolder:FindFirstChild("Male")
 		if alt then return alt end
 	elseif gender == "femboy" then
-		local fTemplate = hatsFolder:FindFirstChild("⚧") or morphFolder:FindFirstChild("⚧")
+		local fTemplate = hatsFolder:FindFirstChild("♂") or morphFolder:FindFirstChild("♂")
 		if fTemplate then return fTemplate end
-		local alt = hatsFolder:FindFirstChild("Femboy") or morphFolder:FindFirstChild("Femboy")
+		local alt = hatsFolder:FindFirstChild("Male") or morphFolder:FindFirstChild("Male")
 		if alt then return alt end
 	end
 
