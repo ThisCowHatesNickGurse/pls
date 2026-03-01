@@ -6,7 +6,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Players = game:GetService("Players")
-
+local FinisherLoadingEvent = ReplicatedStorage:FindFirstChild("FinisherLoadingEvent") 
+if not FinisherLoadingEvent then
+	FinisherLoadingEvent = Instance.new("RemoteEvent")
+	FinisherLoadingEvent.Name = "FinisherLoadingEvent"
+	FinisherLoadingEvent.Parent = ReplicatedStorage
+end
 --------------------------------------------------------------------
 -- MODULE REQUIREMENTS
 --------------------------------------------------------------------
@@ -577,7 +582,28 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 		return -- Exit early, do not start finisher animations
 	end
 
-	-- TAKE AWAY SWORDS
+	-- ==========================================
+	-- TRIGGER LOADING SCREEN & WAIT
+	-- ==========================================
+	local loadingDuration = 2.5 -- Seconds the black screen lasts
+	
+	if finisherPlayer then
+		FinisherLoadingEvent:FireClient(finisherPlayer, loadingDuration)
+	end
+	if victimPlayer:IsA("Player") then
+		FinisherLoadingEvent:FireClient(victimPlayer, loadingDuration)
+	end
+	
+	-- Anchor immediately so they don't move while the screen is blacking out
+	fHrp.Anchored = true
+	vHrp.Anchored = true
+
+	-- Wait for the client UI to cover the screen before teleporting
+	task.wait(loadingDuration * 0.4) 
+
+	-- ==========================================
+	-- SETUP & TELEPORT (Hidden from view)
+	-- ==========================================
 	RemoveSword(finisherPlayer)
 	if victimPlayer:IsA("Player") then RemoveSword(victimPlayer) end
 
@@ -622,9 +648,6 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
 	end
 
-	fHrp.Anchored = true
-	vHrp.Anchored = true
-
 	local data = {
 		Finisher = finisherPlayer,
 		Victim = victimPlayer,
@@ -639,6 +662,9 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	hideClothes(vChar, data)
 	spawnMorphsForPair(fChar, vChar, data)
 
+	-- ==========================================
+	-- PLAY ANIMATIONS
+	-- ==========================================
 	local animName = getRandomAnimName()
 	if animName and Animator then
 		local fAnim = getAnimFromFolder(animName, fRole)
@@ -654,6 +680,9 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 		if p == finisherPlayer or p == victimPlayer then CleanupFinisher(finisherPlayer.UserId) end
 	end))
 
+	-- ==========================================
+	-- TIMING & CLEANUP LOOP
+	-- ==========================================
 	task.spawn(function()
 		local t = 0
 		while ActiveFinishers[finisherPlayer.UserId] == data and t < 30 do
