@@ -86,7 +86,6 @@ local function RemoveSword(player)
 end
 
 local function GiveSword(player)
-	-- Only give the sword if the game is active and they aren't ragdolled or in a finisher
 	if not isGameActive then return end
 	if not player or not player.Character then return end
 	
@@ -96,16 +95,12 @@ local function GiveSword(player)
 	local backpack = player:FindFirstChild("Backpack")
 	if not backpack then return end
 	
-	-- Don't give them a second sword if they already have one
 	if char:FindFirstChild("Sword") or backpack:FindFirstChild("Sword") then return end
 	
-	-- Fetch the sword from ServerStorage
 	local swordTemplate = ServerStorage:FindFirstChild("Sword") or ReplicatedStorage:FindFirstChild("Sword")
 	if swordTemplate and swordTemplate:IsA("Tool") then
 		local newSword = swordTemplate:Clone()
 		newSword.Parent = backpack
-	else
-		warn("WARNING: You must put a Tool named 'Sword' into ServerStorage for the loadout system to work!")
 	end
 end
 
@@ -115,6 +110,7 @@ end
 local function genderCategory(val)
 	if not val then return "neutral" end
 	local s = tostring(val):lower()
+	if s:find("femboy") or s:find("⚧") then return "femboy" end
 	if s:find("♂") or s:find("male") or s == "m" or s == "man" then return "male" end
 	if s:find("♀") or s:find("female") or s == "f" or s == "woman" then return "female" end
 	return "neutral"
@@ -173,6 +169,7 @@ local function safeCreateOverhead(character, newName)
 		local cat = genderCategory(genderText)
 		if cat == "male" then bb.InfoLabel.TextColor3 = Color3.fromRGB(140,190,255)
 		elseif cat == "female" then bb.InfoLabel.TextColor3 = Color3.fromRGB(255,150,200)
+		elseif cat == "femboy" then bb.InfoLabel.TextColor3 = Color3.fromRGB(180,130,255)
 		else bb.InfoLabel.TextColor3 = Color3.fromRGB(200,200,200) end
 	end
 end
@@ -330,7 +327,7 @@ end
 
 local function RemoveMorph(Morph, Character)
 	if not Character or not Morph then return end
-	for _, name in ipairs({"♀","♂"}) do
+	for _, name in ipairs({"♀","♂","⚧"}) do
 		local f = Character:FindFirstChild(name)
 		if f then f:Destroy() end
 	end
@@ -372,6 +369,11 @@ local function pickMorphTemplateForCharacter(character)
 		local maleTemplate = hatsFolder:FindFirstChild("♂") or morphFolder:FindFirstChild("♂")
 		if maleTemplate then return maleTemplate end
 		local alt = hatsFolder:FindFirstChild("Male") or morphFolder:FindFirstChild("Male")
+		if alt then return alt end
+	elseif gender == "femboy" then
+		local fTemplate = hatsFolder:FindFirstChild("⚧") or morphFolder:FindFirstChild("⚧")
+		if fTemplate then return fTemplate end
+		local alt = hatsFolder:FindFirstChild("Femboy") or morphFolder:FindFirstChild("Femboy")
 		if alt then return alt end
 	end
 
@@ -516,7 +518,6 @@ local function CleanupFinisher(finisherId)
 		fChar:SetAttribute("Invincible", false)
 		fChar:SetAttribute("InFinisher", false)
 		
-		-- Give Sword back to the finisher if game is active
 		if not fChar:GetAttribute("IsRagdolled") then
 			GiveSword(fPlayer)
 		end
@@ -536,7 +537,6 @@ local function CleanupFinisher(finisherId)
 		if vHum and vHum.Health <= 75 or data.Finished then
 			Ragdoll.RagdollCharacter(vChar)
 		else
-			-- If they somehow survived unragdolled, give sword back
 			if vPlayer:IsA("Player") then GiveSword(vPlayer) end
 		end
 	end
@@ -559,6 +559,24 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 
 	if not fHrp or not vHrp or not fHum or not vHum then return end
 
+	local fGender = getPlayerGender(finisherPlayer)
+	local vGender = "male"
+	if victimPlayer:IsA("Player") then 
+		vGender = getPlayerGender(victimPlayer) 
+	else 
+		local gAttr = safeGetAttribute(victimPlayer, "Gender")
+		if gAttr then vGender = genderCategory(gAttr) end
+	end
+
+	-- GIRL X GIRL INSTANT KILL LOGIC
+	if fGender == "female" and vGender == "female" then
+		vHum.Health = 0
+		if finisherPlayer:FindFirstChild("leaderstats") and finisherPlayer.leaderstats:FindFirstChild("Kills") then
+			finisherPlayer.leaderstats.Kills.Value += 1
+		end
+		return -- Exit early, do not start finisher animations
+	end
+
 	-- TAKE AWAY SWORDS
 	RemoveSword(finisherPlayer)
 	if victimPlayer:IsA("Player") then RemoveSword(victimPlayer) end
@@ -570,34 +588,37 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	fChar:SetAttribute("InFinisher", true)
 	vChar:SetAttribute("InFinisher", true)
 
-	local fGender = getPlayerGender(finisherPlayer)
-	local vGender = "male"
-	if victimPlayer:IsA("Player") then 
-		vGender = getPlayerGender(victimPlayer) 
-	else 
-		local gAttr = safeGetAttribute(victimPlayer, "Gender")
-		if gAttr then vGender = genderCategory(gAttr) end
-	end
+	-- PRIORITY & POSITIONING LOGIC (Femboy > Female > Male)
+	local priorities = {femboy = 3, female = 2, male = 1, neutral = 1}
+	local fPri = priorities[fGender] or 1
+	local vPri = priorities[vGender] or 1
 
 	local fRole = "Standard"
-	local vRole = "Serious"
+	local vRole = "Standard"
+
+	if fGender == "femboy" then fRole = "Serious" end
+	if vGender == "femboy" then vRole = "Serious" end
+	if fGender == "female" and vGender == "male" then fRole = "Serious" end
+	if vGender == "female" and fGender == "male" then vRole = "Serious" end
+
+	if fRole == vRole then
+		if fRole == "Standard" then vRole = "Serious" else vRole = "Standard" end
+	end
+
 	local forward = fHrp.CFrame.LookVector
+	local victimPos
 
-	if fGender == "female" and vGender == "male" then
-		fRole = "Serious"
-		vRole = "Standard"
-
-		local victimPos = fHrp.Position - (forward * 1)
+	if vPri > fPri then
+		-- Victim has higher priority, place Victim IN FRONT of Finisher
+		victimPos = fHrp.Position + (forward * 1)
+		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
+	elseif fPri > vPri then
+		-- Finisher has higher priority, place Victim BEHIND Finisher
+		victimPos = fHrp.Position - (forward * 1)
 		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
 	else
-		if fGender == "female" then fRole = "Serious" else fRole = "Standard" end
-		if vGender == "female" then vRole = "Serious" else vRole = "Standard" end
-
-		if fRole == vRole then
-			if fRole == "Standard" then vRole = "Serious" else vRole = "Standard" end
-		end
-
-		local victimPos = fHrp.Position + (forward * 1)
+		-- Same priority, default to Victim IN FRONT
+		victimPos = fHrp.Position + (forward * 1)
 		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
 	end
 
@@ -675,8 +696,6 @@ local Maps = {
 	["Icebound"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/cc"
 }
 
-
-
 local GAME_TIME = 600
 local VOTE_TIME = 15
 
@@ -695,10 +714,7 @@ local function teleportPlayersTo(spawnFolder, playersToMove)
 		end
 	end
 
-	if #spawns == 0 then
-		warn("No valid BasePart spawns in:", spawnFolder.Name)
-		return
-	end
+	if #spawns == 0 then return end
 
 	for _, player in ipairs(playersToMove) do
 		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -740,7 +756,7 @@ local function setupHealthListener(character)
 			humanoid.WalkSpeed = 16 
 
 			Ragdoll.UnRagdollCharacter(character)
-			GiveSword(ownerPlayer) -- Give back sword when unragdolled
+			GiveSword(ownerPlayer) 
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
 			if hrp then
@@ -758,7 +774,7 @@ local function setupHealthListener(character)
 			humanoid.WalkSpeed = 0
 
 			Ragdoll.RagdollCharacter(character)
-			RemoveSword(ownerPlayer) -- Take away sword when knocked down
+			RemoveSword(ownerPlayer) 
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
 			local prompt = Instance.new("ProximityPrompt")
@@ -793,7 +809,6 @@ local function setupHealthListener(character)
 end
 
 local function setupPlayer(player)
-	-- Leaderstats setup
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"
 	ls.Parent = player
@@ -802,62 +817,38 @@ local function setupPlayer(player)
 	kills.Value = 0
 	kills.Parent = ls
 
-	-- Identity & Client Prompt
 	PlayerIdentity[player.UserId] = {Gender = "New", Age = "?"}
 	TaskEvent:FireClient(player, "PROMPT_SETUP")
 
 	player.CharacterAdded:Connect(function(c)
-		print("[SPAWN DEBUG] CharacterAdded fired for:", player.Name)
-
-		-- Wait for the crucial character parts to load first
 		local hum = c:WaitForChild("Humanoid", 10)
 		local hrp = c:WaitForChild("HumanoidRootPart", 10)
 		local head = c:WaitForChild("Head", 10)
+		if not hrp then return end 
 
-		if not hrp then 
-			warn("[SPAWN DEBUG] Failed to find HumanoidRootPart for " .. player.Name .. " within 10 seconds!")
-			return 
-		end 
-
-		print("[SPAWN DEBUG] Character parts loaded successfully for:", player.Name)
-
-		-- Finisher Setup logic
 		local id2 = PlayerIdentity[player.UserId]
 		if id2 and c.SetAttribute then pcall(function() c:SetAttribute("Gender", id2.Gender); c:SetAttribute("Age", id2.Age) end) end
 		updateOverheadName(c, player.DisplayName)
 		task.spawn(setupHealthListener, c)
 
-		-- Map Voting & Spawn Teleport logic
 		if isVoting and voteTimeLeft > 0 then
 			VoteStartEvent:FireClient(player, validOptions, voteTimeLeft)
 		end
 
-		print("[SPAWN DEBUG] Game Active Status:", isGameActive)
-
 		if isGameActive and activeMapModel and activeMapModel:FindFirstChild("Spawns") then
-			print("[SPAWN DEBUG] Teleporting to Active Map Spawns.")
 			teleportPlayersTo(activeMapModel.Spawns, {player})
-			GiveSword(player) -- Respawn logic: give sword if game is active
+			GiveSword(player) 
 		else
-			print("[SPAWN DEBUG] Attempting to teleport to Lobby Spawns...")
-			RemoveSword(player) -- Take away sword if in lobby
+			RemoveSword(player) 
 			local lobby = workspace:FindFirstChild("Lobby")
-			if not lobby then
-				warn("[SPAWN DEBUG ERROR] There is no model/folder named 'Lobby' in the Workspace!")
-				return
-			end
-
+			if not lobby then return end
 			local lobbySpawns = lobby:FindFirstChild("Spawns")
 			if lobbySpawns then
-				print("[SPAWN DEBUG] Found workspace.Lobby.Spawns! Teleporting player now.")
 				teleportPlayersTo(lobbySpawns, {player})
-			else
-				warn("[SPAWN DEBUG ERROR] Found 'Lobby', but could not find a 'Spawns' folder inside it!")
 			end
 		end
 	end)
 	
-	-- Check for pre-existing character on late joins
 	if player.Character and player.Character.Parent then
 		task.spawn(function()
 			pcall(function() player.Character:WaitForChild("Humanoid",10); player.Character:WaitForChild("Head",10) end)
@@ -890,7 +881,6 @@ Players.PlayerRemoving:Connect(function(p)
 	PlayerIdentity[p.UserId] = nil
 end)
 
--- Initialize players already in-game
 for _, p in pairs(Players:GetPlayers()) do
 	task.spawn(function() setupPlayer(p) end)
 end
@@ -986,7 +976,6 @@ task.spawn(function()
 		if activeMapModel and activeMapModel:FindFirstChild("Spawns") then
 			teleportPlayersTo(activeMapModel.Spawns, Players:GetPlayers())
 			
-			-- Give Swords to everyone teleported into the map
 			for _, p in ipairs(Players:GetPlayers()) do
 				GiveSword(p)
 			end
@@ -1009,7 +998,6 @@ task.spawn(function()
 		local lobbySpawns = workspace:FindFirstChild("Lobby") and workspace.Lobby:FindFirstChild("Spawns")
 		teleportPlayersTo(lobbySpawns, Players:GetPlayers())
 		
-		-- Remove Swords from everyone back in the lobby
 		for _, p in ipairs(Players:GetPlayers()) do
 			RemoveSword(p)
 		end
