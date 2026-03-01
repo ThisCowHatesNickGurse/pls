@@ -518,36 +518,48 @@ local function CleanupFinisher(finisherId)
 	removeSpawnedMorphs(data)
 
 	if fChar then
-		local fHrp = fChar:FindFirstChild("HumanoidRootPart")
-		if fHrp then fHrp.Anchored = false end
-		fChar:SetAttribute("Invincible", false)
-		fChar:SetAttribute("InFinisher", false)
-		
-		if not fChar:GetAttribute("IsRagdolled") then
-			GiveSword(fPlayer)
-		end
-	end
+        local fHrp = fChar:FindFirstChild("HumanoidRootPart")
+        if fHrp then 
+            fHrp.Anchored = false 
+            if fHrp.Parent and fHrp.Parent:FindFirstChild("Humanoid") then
+                fHrp.Parent.Humanoid.AutoRotate = true
+            end
+        end
+        
+        fChar:SetAttribute("Invincible", false)
+        fChar:SetAttribute("InFinisher", false)
+        
+        if not fChar:GetAttribute("IsRagdolled") then
+            GiveSword(fPlayer)
+        end
+    end
 
-	if vChar then
-		local vHrp = vChar:FindFirstChild("HumanoidRootPart")
-		if vHrp then vHrp.Anchored = false end
-		vChar:SetAttribute("Invincible", false)
-		vChar:SetAttribute("InFinisher", false)
+    if vChar then
+        local vHrp = vChar:FindFirstChild("HumanoidRootPart")
+        if vHrp then 
+            vHrp.Anchored = false 
+            if vHrp.Parent and vHrp.Parent:FindFirstChild("Humanoid") then
+                vHrp.Parent.Humanoid.AutoRotate = true
+            end
+        end
+        
+        vChar:SetAttribute("Invincible", false)
+        vChar:SetAttribute("InFinisher", false)
 
-		local vHum = vChar:FindFirstChild("Humanoid")
-		if vHum and vHum.Health > 0 and data.Finished then
-			vHum.Health = 0
-		end
+        local vHum = vChar:FindFirstChild("Humanoid")
+        if vHum and vHum.Health > 0 and data.Finished then
+            vHum.Health = 0
+        end
 
-		if vHum and vHum.Health <= 75 or data.Finished then
-			Ragdoll.RagdollCharacter(vChar)
-		else
-			if vPlayer:IsA("Player") then GiveSword(vPlayer) end
-		end
-	end
-	vHrp.Parent.Humanoid.AutoRotate = true
-	fHrp.Parent.Humanoid.AutoRotate = true
-	ActiveFinishers[finisherId] = nil
+        if vHum and (vHum.Health <= 75 or data.Finished) then
+            Ragdoll.RagdollCharacter(vChar)
+        else
+            if vPlayer:IsA("Player") then GiveSword(vPlayer) end
+        end
+    end
+
+    -- The crash is bypassed, allowing the table to finally clear!
+    ActiveFinishers[finisherId] = nil
 end
 
 local function StartFinisherSequence(finisherPlayer, victimPlayer)
@@ -676,7 +688,7 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	-- ==========================================
 	task.spawn(function()
 		local t = 0
-		while ActiveFinishers[finisherPlayer.UserId] == data and t < 30 do
+		while ActiveFinishers[finisherPlayer.UserId] == data and t <= 100 do
 			task.wait(1)
 			t += 1
 
