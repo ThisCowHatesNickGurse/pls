@@ -807,7 +807,6 @@ local function setupPlayer(player)
 	TaskEvent:FireClient(player, "PROMPT_SETUP")
 
 	player.CharacterAdded:Connect(function(c)
-		wait(3.5)
 		print("[SPAWN DEBUG] CharacterAdded fired for:", player.Name)
 
 		-- Wait for the crucial character parts to load first
