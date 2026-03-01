@@ -93,15 +93,15 @@ end
 local function GiveSword(player)
 	if not isGameActive then return end
 	if not player or not player.Character then return end
-
+	
 	local char = player.Character
 	if char:GetAttribute("IsRagdolled") or char:GetAttribute("InFinisher") then return end
-
+	
 	local backpack = player:FindFirstChild("Backpack")
 	if not backpack then return end
-
+	
 	if char:FindFirstChild("Sword") or backpack:FindFirstChild("Sword") then return end
-
+	
 	local swordTemplate = ServerStorage:FindFirstChild("Sword") or ReplicatedStorage:FindFirstChild("Sword")
 	if swordTemplate and swordTemplate:IsA("Tool") then
 		local newSword = swordTemplate:Clone()
@@ -522,7 +522,7 @@ local function CleanupFinisher(finisherId)
 		if fHrp then fHrp.Anchored = false end
 		fChar:SetAttribute("Invincible", false)
 		fChar:SetAttribute("InFinisher", false)
-
+		
 		if not fChar:GetAttribute("IsRagdolled") then
 			GiveSword(fPlayer)
 		end
@@ -587,14 +587,14 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	-- TRIGGER LOADING SCREEN & WAIT
 	-- ==========================================
 	local loadingDuration = 2.5 -- Seconds the black screen lasts
-
+	
 	if finisherPlayer then
 		FinisherLoadingEvent:FireClient(finisherPlayer, loadingDuration)
 	end
 	if victimPlayer:IsA("Player") then
 		FinisherLoadingEvent:FireClient(victimPlayer, loadingDuration)
 	end
-
+	
 	-- Anchor immediately so they don't move while the screen is blacking out
 	fHrp.Anchored = true
 	vHrp.Anchored = true
@@ -721,68 +721,8 @@ local Maps = {
 	["Icebound"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/cc"
 }
 
--- Fixed Syntax: Changed [[[ ... ]]] to [=[ ... ]=]
-local MapLightingStrings = {
-	["Haunted Mansion"] = [=[[{"Properties":{"StarCount":3000,"SkyboxUp":"rbxassetid://10961998352","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"rbxassetid://10962028689","CelestialBodiesShown":true,"SkyboxBk":"rbxassetid://10962025357","SkyboxLf":"rbxassetid://10962010237","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":21,"SkyboxFt":"rbxassetid://10962031721","SkyboxRt":"rbxassetid://10962003823","MoonAngularSize":11},"Name":"HauntedMansion","ClassName":"Sky"},{"Properties":{"Enabled":true,"Spread":0.10000000149011612,"Intensity":0.009999999776482582},"Name":"SunRays","ClassName":"SunRaysEffect"},{"Properties":{"Enabled":false,"FarIntensity":0.10000000149011612,"FocusDistance":0.05000000074505806,"InFocusRadius":30,"NearIntensity":0.75},"Name":"DepthOfField","ClassName":"DepthOfFieldEffect"},{"Properties":{"Threshold":2,"Enabled":true,"Intensity":1,"Size":24},"Name":"Bloom","ClassName":"BloomEffect"},{"Properties":{"Density":0.30000001192092898,"Haze":0,"Color":{"b":0.7803921699523926,"g":0.7803921699523926,"r":0.7803921699523926},"Decay":{"b":0.4901960790157318,"g":0.43921568989753725,"r":0.4156862795352936},"Glare":0,"Offset":0.25},"Name":"Atmosphere","ClassName":"Atmosphere"},{"Properties":{"Enabled":false,"Size":9},"Name":"Blur","ClassName":"BlurEffect"}]]=],
-	["Icebound"] = [=[[{"Properties":{"Enabled":true,"Saturation":0.20000000298023225,"Contrast":0.10000000149011612,"TintColor":{"b":1,"g":1,"r":1},"Brightness":0},"Name":"ColorCorrection","ClassName":"ColorCorrectionEffect"},{"Properties":{"Enabled":true,"Spread":1,"Intensity":0.30000001192092898},"Name":"SunRays","ClassName":"SunRaysEffect"},{"Properties":{"StarCount":0,"SkyboxUp":"http://www.roblox.com/asset/?id=91458002","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"http://www.roblox.com/asset/?id=91457980","CelestialBodiesShown":true,"SkyboxBk":"http://www.roblox.com/asset/?id=91458024","SkyboxLf":"http://www.roblox.com/asset/?id=91458024","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":7,"SkyboxFt":"http://www.roblox.com/asset/?id=91458024","SkyboxRt":"http://www.roblox.com/asset/?id=91458024","MoonAngularSize":11},"Name":"Clear Atmospheric Sky","ClassName":"Sky"},{"Properties":{"Density":0.25,"Haze":1.7599999904632569,"Color":{"b":1,"g":1,"r":1},"Decay":{"b":0,"g":0,"r":0},"Glare":0,"Offset":0},"Name":"Atmosphere","ClassName":"Atmosphere"},{"Properties":{"Enabled":false,"Size":9},"Name":"Blur","ClassName":"BlurEffect"}]]=],
-	["Pumpkin Patch"] = [=[[{"Properties":{"Enabled":true,"Saturation":0.20000000298023225,"Contrast":0.10000000149011612,"TintColor":{"b":1,"g":1,"r":1},"Brightness":0},"Name":"ColorCorrection","ClassName":"ColorCorrectionEffect"},{"Properties":{"Enabled":true,"Spread":1,"Intensity":0.25},"Name":"SunRays","ClassName":"SunRaysEffect"},{"Properties":{"StarCount":3000,"SkyboxUp":"rbxassetid://323493360","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"rbxassetid://323494368","CelestialBodiesShown":true,"SkyboxBk":"rbxassetid://323494035","SkyboxLf":"http://www.roblox.com/asset/?id=9070056786","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":21,"SkyboxFt":"http://www.roblox.com/asset/?id=9070055745","SkyboxRt":"rbxassetid://323494067","MoonAngularSize":11},"Name":"Sunset","ClassName":"Sky"},{"Properties":{"Density":0.20000000298023225,"Haze":0,"Color":{"b":0.4235000014305115,"g":0.666700005531311,"r":0.7843000292778015},"Decay":{"b":0.05490000173449516,"g":0.2353000044822693,"r":0.36079999804496767},"Glare":0,"Offset":0},"Name":"Atmosphere","ClassName":"Atmosphere"},{"Properties":{"Enabled":false,"Size":9},"Name":"Blur","ClassName":"BlurEffect"}]]=],
-	["Terraria"] = [=[[{"Properties":{"Density":0.20000000298023225,"Haze":1.7599999904632569,"Color":{"b":1,"g":1,"r":1},"Decay":{"b":0,"g":0,"r":0},"Glare":0,"Offset":0},"Name":"Atmosphere","ClassName":"Atmosphere"},{"Properties":{"StarCount":1500,"SkyboxUp":"http://www.roblox.com/asset/?id=144931564","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"http://www.roblox.com/asset/?id=144931530","CelestialBodiesShown":true,"SkyboxBk":"http://www.roblox.com/asset/?id=144933338","SkyboxLf":"http://www.roblox.com/asset/?id=144933244","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":5,"SkyboxFt":"http://www.roblox.com/asset/?id=144933262","SkyboxRt":"http://www.roblox.com/asset/?id=144933299","MoonAngularSize":11},"Name":"Sky","ClassName":"Sky"},{"Properties":{"Threshold":3.809999942779541,"Enabled":true,"Intensity":1,"Size":56},"Name":"Bloom","ClassName":"BloomEffect"},{"Properties":{"Enabled":true,"Saturation":0.20000000298023225,"Contrast":0.4000000059604645,"TintColor":{"b":1,"g":1,"r":1},"Brightness":0},"Name":"ColorCorrection","ClassName":"ColorCorrectionEffect"},{"Properties":{"Enabled":true,"Spread":1,"Intensity":0.14000000059604646},"Name":"SunRays","ClassName":"SunRaysEffect"},{"Properties":{"Enabled":false,"Size":9},"Name":"Blur","ClassName":"BlurEffect"}]]=],
-	["Tree Cave"] = [=[[{"Properties":{"StarCount":0,"SkyboxUp":"http://www.roblox.com/asset/?ID=2013298","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"http://www.roblox.com/asset/?ID=2013298","CelestialBodiesShown":false,"SkyboxBk":"http://www.roblox.com/asset/?ID=2013298","SkyboxLf":"http://www.roblox.com/asset/?ID=2013298","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":21,"SkyboxFt":"http://www.roblox.com/asset/?ID=2013298","SkyboxRt":"http://www.roblox.com/asset/?ID=2013298","MoonAngularSize":11},"Name":"BlackSkybox","ClassName":"Sky"},{"Properties":{"Enabled":false,"Size":9},"Name":"Blur","ClassName":"BlurEffect"}]]=],
-	["Retro"] = [=[[{"Properties":{"Density":0.3089999854564667,"Haze":0,"Color":{"b":0.4235000014305115,"g":0.666700005531311,"r":0.7843000292778015},"Decay":{"b":0.05490000173449516,"g":0.2353000044822693,"r":0.36079999804496767},"Glare":0,"Offset":0},"Name":"Atmosphere","ClassName":"Atmosphere"},{"Properties":{"StarCount":3000,"SkyboxUp":"rbxasset://sky/null_plainsky512_up.jpg","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"rbxasset://sky/null_plainsky512_dn.jpg","CelestialBodiesShown":true,"SkyboxBk":"rbxasset://sky/null_plainsky512_bk.jpg","SkyboxLf":"rbxasset://sky/null_plainsky512_lf.jpg","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":21,"SkyboxFt":"rbxasset://sky/null_plainsky512_ft.jpg","SkyboxRt":"rbxasset://sky/null_plainsky512_rt.jpg","MoonAngularSize":11},"Name":"Sky","ClassName":"Sky"},{"Properties":{"Enabled":true,"Saturation":0.10000000149011612,"Contrast":0,"TintColor":{"b":1,"g":1,"r":1},"Brightness":0},"Name":"ColorCorrection","ClassName":"ColorCorrectionEffect"},{"Properties":{"Enabled":true,"Spread":1,"Intensity":0.25},"Name":"SunRays","ClassName":"SunRaysEffect"}]]=],
-	["Crossroads"] = [=[[{"Properties":{"StarCount":3000,"SkyboxUp":"http://www.roblox.com/asset/?version=1&id=1013854","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"http://www.roblox.com/asset/?version=1&id=1013853","CelestialBodiesShown":true,"SkyboxBk":"http://www.roblox.com/asset/?version=1&id=1013852","SkyboxLf":"http://www.roblox.com/asset/?version=1&id=1013851","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":21,"SkyboxFt":"http://www.roblox.com/asset/?version=1&id=1013850","SkyboxRt":"http://www.roblox.com/asset/?version=1&id=1013849","MoonAngularSize":11},"Name":"CrossRoads","ClassName":"Sky"},{"Properties":{"Threshold":2,"Enabled":true,"Intensity":1,"Size":24},"Name":"Bloom","ClassName":"BloomEffect"},{"Properties":{"Enabled":false,"FarIntensity":0.10000000149011612,"FocusDistance":0.05000000074505806,"InFocusRadius":30,"NearIntensity":0.75},"Name":"DepthOfField","ClassName":"DepthOfFieldEffect"},{"Properties":{"Enabled":true,"Spread":0.10000000149011612,"Intensity":0.009999999776482582},"Name":"SunRays","ClassName":"SunRaysEffect"},{"Properties":{"Density":0.30000001192092898,"Haze":0,"Color":{"b":0.7803921699523926,"g":0.7803921699523926,"r":0.7803921699523926},"Decay":{"b":0.4901960790157318,"g":0.43921568989753725,"r":0.4156862795352936},"Glare":0,"Offset":0.25},"Name":"Atmosphere","ClassName":"Atmosphere"},{"Properties":{"Enabled":false,"Size":9},"Name":"Blur","ClassName":"BlurEffect"}]]=],
-	["Big Map"] = [=[[{"Properties":{"StarCount":3000,"SkyboxUp":"http://www.roblox.com/asset/?id=83951719","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"http://www.roblox.com/asset/?id=83951719","CelestialBodiesShown":true,"SkyboxBk":"http://www.roblox.com/asset/?id=83951719","SkyboxLf":"http://www.roblox.com/asset/?id=83951719","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":21,"SkyboxFt":"http://www.roblox.com/asset/?id=83951719","SkyboxRt":"http://www.roblox.com/asset/?id=83951719","MoonAngularSize":11},"Name":"night","ClassName":"Sky"}]]=],
-	["Glass Houses"] = [=[[{"Properties":{"Threshold":2,"Enabled":true,"Intensity":1,"Size":24},"Name":"Bloom","ClassName":"BloomEffect"},{"Properties":{"Enabled":false,"FarIntensity":0.10000000149011612,"FocusDistance":0.05000000074505806,"InFocusRadius":30,"NearIntensity":0.75},"Name":"DepthOfField","ClassName":"DepthOfFieldEffect"},{"Properties":{"Enabled":true,"Spread":0.10000000149011612,"Intensity":0.009999999776482582},"Name":"SunRays","ClassName":"SunRaysEffect"},{"Properties":{"Density":0.30000001192092898,"Haze":0,"Color":{"b":0.7803921699523926,"g":0.7803921699523926,"r":0.7803921699523926},"Decay":{"b":0.4901960790157318,"g":0.43921568989753725,"r":0.4156862795352936},"Glare":0,"Offset":0.25},"Name":"Atmosphere","ClassName":"Atmosphere"},{"Properties":{"Enabled":false,"Size":9},"Name":"Blur","ClassName":"BlurEffect"},{"Properties":{"StarCount":3000,"SkyboxUp":"rbxassetid://672346072","MoonTextureId":"rbxasset://sky/moon.jpg","SkyboxDn":"rbxassetid://672345828","CelestialBodiesShown":true,"SkyboxBk":"rbxassetid://672345740","SkyboxLf":"rbxassetid://672345927","SunTextureId":"rbxasset://sky/sun.jpg","SunAngularSize":21,"SkyboxFt":"rbxassetid://672345879","SkyboxRt":"rbxassetid://672346006","MoonAngularSize":11},"Name":"GlassHouses","ClassName":"Sky"}]]=]
-}
-
--- Lighting Decoder Functions
-local function ClearLighting()
-	local removableClasses = {
-		Atmosphere = true, Sky = true, BloomEffect = true, 
-		BlurEffect = true, DepthOfFieldEffect = true, 
-		SunRaysEffect = true, ColorCorrectionEffect = true
-	}
-
-	for _, child in ipairs(game.Lighting:GetChildren()) do
-		if removableClasses[child.ClassName] then
-			child:Destroy()
-		end
-	end
-end
-
-local function ApplyLighting(jsonString)
-	ClearLighting()
-
-	if not jsonString or jsonString == "" then return end
-
-	local success, data = pcall(function()
-		return HttpService:JSONDecode(jsonString)
-	end)
-
-	if not success or not data then return end
-
-	for _, objData in ipairs(data) do
-		local newObj = Instance.new(objData.ClassName)
-		newObj.Name = objData.Name
-
-		for prop, value in pairs(objData.Properties) do
-			if type(value) == "table" and value.r and value.g and value.b then
-				newObj[prop] = Color3.new(value.r, value.g, value.b)
-			else
-				newObj[prop] = value
-			end
-		end
-
-		newObj.Parent = game.Lighting
-	end
-end
-
 local GAME_TIME = 600
 local VOTE_TIME = 15
-
--- Fixed: Added missing local state variables
-local isGameActive = false
-local isVoting = false
-local voteTimeLeft = 0
 
 local votes = {}
 local tallies = {}
@@ -882,10 +822,9 @@ local function setupHealthListener(character)
 			end)
 
 			task.spawn(function()
-                -- Fixed: Added humanoid.Health > 0 to prevent infinite loop memory leaks if dead
-				while character and character.Parent and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") and humanoid.Health > 0 do
+				while character and character.Parent and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") do
 					task.wait(1.5)
-					if humanoid.Health < humanoid.MaxHealth then
+					if humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
 						humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 1)
 					end
 				end
@@ -934,7 +873,7 @@ local function setupPlayer(player)
 			end
 		end
 	end)
-
+	
 	if player.Character and player.Character.Parent then
 		task.spawn(function()
 			pcall(function() player.Character:WaitForChild("Humanoid",10); player.Character:WaitForChild("Head",10) end)
@@ -1002,7 +941,7 @@ end)
 CastVoteEvent.OnServerEvent:Connect(function(player, mapName)
 	if table.find(validOptions, mapName) then
 		votes[player] = mapName
-		table.clear(tallies) -- Fixed: use table.clear() instead of creating a new {} table to keep memory references intact
+		tallies = {}
 		for _, v in pairs(votes) do
 			tallies[v] = (tallies[v] or 0) + 1
 		end
@@ -1010,7 +949,9 @@ CastVoteEvent.OnServerEvent:Connect(function(player, mapName)
 	end
 end)
 
--- Main Game Loop
+--------------------------------------------------------------------
+-- MAIN MAP ROUND LOOP
+--------------------------------------------------------------------
 task.spawn(function()
 	while true do
 		isGameActive = false
@@ -1052,18 +993,14 @@ task.spawn(function()
 		TimerUpdateEvent:FireAllClients("Loading: " .. winningMapName .. "...")
 		task.wait(2) 
 
-		-- Load Map and Apply Lighting
 		local dataUrl = Maps[winningMapName]
 		activeMapModel = Serializer.Map.LoadFromURL(dataUrl, workspace)
-
-		-- Decode and apply the lighting for the winning map
-		ApplyLighting(MapLightingStrings[winningMapName])
 
 		isGameActive = true
 
 		if activeMapModel and activeMapModel:FindFirstChild("Spawns") then
 			teleportPlayersTo(activeMapModel.Spawns, Players:GetPlayers())
-
+			
 			for _, p in ipairs(Players:GetPlayers()) do
 				GiveSword(p)
 			end
@@ -1077,17 +1014,15 @@ task.spawn(function()
 		end
 
 		isGameActive = false
-
+		
 		if activeMapModel then
 			activeMapModel:Destroy()
 			activeMapModel = nil
 		end
 
-		ClearLighting()
-
 		local lobbySpawns = workspace:FindFirstChild("Lobby") and workspace.Lobby:FindFirstChild("Spawns")
 		teleportPlayersTo(lobbySpawns, Players:GetPlayers())
-
+		
 		for _, p in ipairs(Players:GetPlayers()) do
 			RemoveSword(p)
 		end
