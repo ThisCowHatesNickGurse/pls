@@ -634,19 +634,8 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local forward = fHrp.CFrame.LookVector
 	local victimPos
 
-	if vPri > fPri then
-		-- Victim has higher priority, place Victim IN FRONT of Finisher
-		victimPos = fHrp.Position + (forward * 1)
-		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
-	elseif fPri > vPri then
-		-- Finisher has higher priority, place Victim BEHIND Finisher
-		victimPos = fHrp.Position - (forward * 1)
-		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
-	else
-		-- Same priority, default to Victim IN FRONT
-		victimPos = fHrp.Position + (forward * 1)
-		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
-	end
+	victimPos = fHrp.Position + verticalOffset
+    vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
 
 	local data = {
 		Finisher = finisherPlayer,
