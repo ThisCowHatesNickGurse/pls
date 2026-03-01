@@ -38,8 +38,7 @@ local Serializer = require(script:WaitForChild("ModuleScript"))
 local morphFolder = ReplicatedStorage:FindFirstChild("Morphs") or Instance.new("Folder", ReplicatedStorage)
 morphFolder.Name = "Morphs"
 local animsFolder = ServerStorage:WaitForChild("SortedAnims")
-local hatsFolder = ServerStorage:FindFirstChild("HatMorphs") or Instance.new("Folder", ServerStorage)
-hatsFolder.Name = "HatMorphs"
+local hatsFolder = ServerStorage:WaitForChild("HatMorphs")
 
 local function getOrCreateRemote(className, name, parent)
 	local remote = parent:FindFirstChild(name)
