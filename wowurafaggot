@@ -634,8 +634,8 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local forward = fHrp.CFrame.LookVector
 	local victimPos
 
-	victimPos = fHrp.Position + verticalOffset
-    vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
+	vHrp.Parent.Humanoid.AutoRotate = false
+	vHrp.CFrame = fHrp.CFrame
 
 	local data = {
 		Finisher = finisherPlayer,
