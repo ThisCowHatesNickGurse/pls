@@ -2,11 +2,13 @@
 -- Place in ServerScriptService. 
 -- Ensure 'Animator', 'Ragdoll', and 'ModuleScript' are children of this script.
 
+local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Players = game:GetService("Players")
 local FinisherLoadingEvent = ReplicatedStorage:FindFirstChild("FinisherLoadingEvent") 
+local LYRICS_URL = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/lyrical" 
 if not FinisherLoadingEvent then
 	FinisherLoadingEvent = Instance.new("RemoteEvent")
 	FinisherLoadingEvent.Name = "FinisherLoadingEvent"
@@ -972,6 +974,35 @@ CastVoteEvent.OnServerEvent:Connect(function(player, mapName)
 	end
 end)
 
+local function getRandomLyric()
+	-- 1. Fetch the data safely using pcall
+	local success, responseText = pcall(function()
+		return HttpService:GetAsync(LYRICS_URL)
+	end)
+
+	if not success then
+		warn("Failed to fetch lyrics from URL. Error: " .. tostring(responseText))
+		return nil
+	end
+
+	local paragraphs = {}
+	
+	-- 2. Extract text between [[ and ]]
+	-- The % escapes the square brackets because they are magic characters in Lua patterns
+	-- (.-) captures everything inside lazily (so it stops at the first ]] it sees)
+	for lyricMatch in string.gmatch(responseText, "%[%[(.-)%]%]") do
+		table.insert(paragraphs, lyricMatch)
+	end
+
+	-- 3. Pick a random paragraph
+	if #paragraphs > 0 then
+		local randomIndex = math.random(1, #paragraphs)
+		return paragraphs[randomIndex]
+	else
+		warn("No lyrics matching the [[ ]] format were found at the URL.")
+		return nil
+	end
+end
 --------------------------------------------------------------------
 -- MAIN MAP ROUND LOOP
 --------------------------------------------------------------------
