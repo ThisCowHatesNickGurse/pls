@@ -1,0 +1,946 @@
+-- Server script: Finisher, Morphing Engine & Map Voting System (Full Assembly)
+-- Place in ServerScriptService. 
+-- Ensure 'Animator', 'Ragdoll', and 'ModuleScript' are children of this script.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local Players = game:GetService("Players")
+
+--------------------------------------------------------------------
+-- MODULE REQUIREMENTS
+--------------------------------------------------------------------
+local AnimatorModule = script:FindFirstChild("Animator")
+local Animator = nil
+if AnimatorModule then
+	local ok, mod = pcall(function() return require(AnimatorModule) end)
+	if ok then 
+		Animator = mod 
+		if not Animator.ChangeAnimationSpeed then
+			Animator.ChangeAnimationSpeed = function(FunnyAnimation, speed)
+				if FunnyAnimation:IsA("Script") and FunnyAnimation:FindFirstChild("StopAnimationControl") then
+					local speedVal = FunnyAnimation:FindFirstChild("Speed")
+					if speedVal then
+						speedVal.Value = speed
+					end
+				end
+			end
+		end
+	end
+end
+
+local Ragdoll = require(script:WaitForChild("Ragdoll"))
+local Serializer = require(script:WaitForChild("ModuleScript"))
+
+--------------------------------------------------------------------
+-- FOLDERS & REMOTE EVENTS
+--------------------------------------------------------------------
+-- Failsafe for folders if they don't exist yet
+local morphFolder = ReplicatedStorage:FindFirstChild("Morphs") or Instance.new("Folder", ReplicatedStorage)
+morphFolder.Name = "Morphs"
+local animsFolder = ServerStorage:FindFirstChild("SortedAnims") or Instance.new("Folder", ServerStorage)
+animsFolder.Name = "SortedAnims"
+local hatsFolder = ServerStorage:FindFirstChild("HatMorphs") or Instance.new("Folder", ServerStorage)
+hatsFolder.Name = "HatMorphs"
+
+local function getOrCreateRemote(className, name, parent)
+	local remote = parent:FindFirstChild(name)
+	if remote then return remote end
+	remote = Instance.new(className)
+	remote.Name = name
+	remote.Parent = parent
+	return remote
+end
+
+local TaskEvent = getOrCreateRemote("RemoteEvent", "TaskEvent", ReplicatedStorage)
+local morphEvent = getOrCreateRemote("RemoteEvent", "MorphEvent", ReplicatedStorage)
+local VoteStartEvent = getOrCreateRemote("RemoteEvent", "VoteStartEvent", ReplicatedStorage)
+local CastVoteEvent = getOrCreateRemote("RemoteEvent", "CastVoteEvent", ReplicatedStorage)
+local UpdateVotesEvent = getOrCreateRemote("RemoteEvent", "UpdateVotesEvent", ReplicatedStorage)
+local TimerUpdateEvent = getOrCreateRemote("RemoteEvent", "TimerUpdateEvent", ReplicatedStorage)
+
+--------------------------------------------------------------------
+-- FINISHER & MORPHING GAME LOGIC / STATE
+--------------------------------------------------------------------
+local PlayerIdentity = {}     
+local ActiveFinishers = {}
+local PlayerDummies = {} 
+
+local function genderCategory(val)
+	if not val then return "neutral" end
+	local s = tostring(val):lower()
+	if s:find("♂") or s:find("male") or s == "m" or s == "man" then return "male" end
+	if s:find("♀") or s:find("female") or s == "f" or s == "woman" then return "female" end
+	return "neutral"
+end
+
+local function safeGetAttribute(inst, name)
+	if not inst or not inst.GetAttribute then return nil end
+	local ok, val = pcall(function() return inst:GetAttribute(name) end)
+	if ok then return val end
+	return nil
+end
+
+local function getPlayerGender(player)
+	if not player then return "neutral" end
+	local id = PlayerIdentity[player.UserId]
+	if id and id.Gender then return genderCategory(id.Gender) end
+	if player.Character then
+		local g = safeGetAttribute(player.Character, "Gender")
+		if g then return genderCategory(g) end
+	end
+	return "neutral"
+end
+
+local function safeCreateOverhead(character, newName)
+	if not character then return end
+	local ok, head = pcall(function() return character:WaitForChild("Head", 10) end)
+	if not ok or not head then return end
+
+	local bb = head:FindFirstChild("RP_Billboard")
+	if not bb then
+		bb = Instance.new("BillboardGui")
+		bb.Name = "RP_Billboard"; bb.Adornee = head; bb.Size = UDim2.new(6,0,1.2,0); bb.StudsOffset = Vector3.new(0,2.8,0); bb.AlwaysOnTop = false; bb.MaxDistance = 80; bb.LightInfluence = 0; bb.Parent = head
+		local nameLabel = Instance.new("TextLabel"); nameLabel.Name = "RPName"; nameLabel.Size = UDim2.new(1,0,0.6,0); nameLabel.Position = UDim2.new(0,0,0,0); nameLabel.BackgroundTransparency = 1; nameLabel.TextScaled = true; nameLabel.Font = Enum.Font.FredokaOne; nameLabel.TextStrokeTransparency = 0; nameLabel.Parent = bb
+		local infoLabel = Instance.new("TextLabel"); infoLabel.Name = "InfoLabel"; infoLabel.Size = UDim2.new(1,0,0.3,0); infoLabel.Position = UDim2.new(0,0,0.6,0); infoLabel.BackgroundTransparency = 1; infoLabel.TextScaled = true; infoLabel.Font = Enum.Font.GothamBold; infoLabel.TextStrokeTransparency = 0; infoLabel.Parent = bb
+	end
+
+	if bb:FindFirstChild("RPName") then
+		bb.RPName.Text = tostring(newName or character.Name)
+		bb.RPName.TextColor3 = Color3.fromRGB(255,255,255)
+	end
+
+	local gattr = safeGetAttribute(character, "Gender")
+	local aattr = safeGetAttribute(character, "Age")
+	if (not gattr or not aattr) then
+		local ply = Players:GetPlayerFromCharacter(character)
+		if ply and PlayerIdentity[ply.UserId] then
+			gattr = gattr or PlayerIdentity[ply.UserId].Gender
+			aattr = aattr or PlayerIdentity[ply.UserId].Age
+		end
+	end
+	local ageText = aattr or "?"
+	local genderText = gattr or "New"
+
+	if bb:FindFirstChild("InfoLabel") then
+		bb.InfoLabel.Text = string.format("%s  |  %s", ageText, genderText)
+		local cat = genderCategory(genderText)
+		if cat == "male" then bb.InfoLabel.TextColor3 = Color3.fromRGB(140,190,255)
+		elseif cat == "female" then bb.InfoLabel.TextColor3 = Color3.fromRGB(255,150,200)
+		else bb.InfoLabel.TextColor3 = Color3.fromRGB(200,200,200) end
+	end
+end
+
+local function updateOverheadName(character, newName)
+	pcall(function() safeCreateOverhead(character, newName) end)
+end
+
+--------------------------------------------------------------------
+-- MORPHING & CLOTHES SYSTEM
+--------------------------------------------------------------------
+local function hideClothes(char, record)
+	if not char or not record then return end
+	record.StoredClothes = record.StoredClothes or {}
+	record.StoredClothes[char] = {}
+	for _, v in pairs(char:GetChildren()) do
+		if v:IsA("Clothing") or v:IsA("ShirtGraphic") then
+			table.insert(record.StoredClothes[char], v)
+			v.Parent = nil
+		elseif v:IsA("Accessory") then
+			if v:FindFirstChildWhichIsA("WrapLayer", true) then
+				table.insert(record.StoredClothes[char], v)
+				v.Parent = nil
+			end
+		end
+	end
+end
+
+local function restoreClothes(record)
+	if not record or not record.StoredClothes then return end
+	for char, clothesList in pairs(record.StoredClothes) do
+		for _, v in ipairs(clothesList) do
+			if v and char and char.Parent then
+				v.Parent = char
+			end
+		end
+	end
+end
+
+local function weldMorphPiece(Character, MorphModel, morphPieceName, c0, c1)
+	if not Character or not MorphModel then return end
+	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso") or Character:FindFirstChild("HumanoidRootPart")
+	if not torso then return end
+	local MorphPiece = MorphModel:FindFirstChild(morphPieceName)
+	if MorphPiece then
+		local part1 = MorphPiece:FindFirstChild("Middle") or MorphPiece
+		if not part1 then return end
+		local newm6d = torso:FindFirstChild("M6D"..MorphPiece.Name) or Instance.new("Motor6D")
+		newm6d.Name = "M6D"..MorphPiece.Name; newm6d.Part0 = torso; newm6d.Part1 = part1; newm6d.C0 = c0 or CFrame.new(); newm6d.C1 = c1 or CFrame.new(); newm6d.Parent = torso; MorphPiece.Parent = Character
+		if newm6d.Part1 then newm6d.Part1.Name = "M6D"..MorphPiece.Name end
+	end
+end
+
+local function weldStaticPiece(Character, MorphModel, morphPieceName)
+	if not Character or not MorphModel then return end
+	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso") or Character:FindFirstChild("HumanoidRootPart")
+	if not torso then return end
+	local MorphPiece = MorphModel:FindFirstChild(morphPieceName)
+	if MorphPiece then
+		local part1 = MorphPiece:FindFirstChild("Middle") or MorphPiece
+		if not part1 then return end
+		local weld = Instance.new("Weld")
+		weld.Part0 = torso; weld.Part1 = part1; weld.C0 = CFrame.new(0,0,0); weld.Parent = torso; MorphPiece.Parent = Character
+	end
+end
+
+local function CorrectColors(targ, character)
+	if not character or not targ then return end
+	local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+	if not torso then return end
+
+	local targetColor = torso.Color
+
+	local skinParts = {
+		["color2"] = true, ["color3"] = true, ["color4"] = true, ["color5"] = true, ["color6"] = true,
+		["Rod"] = true, ["Orbs"] = true, 
+		["UpperL"] = true, ["UpperR"] = true, ["LowerL"] = true, ["LowerR"] = true,
+		["UpperStatic"] = true, ["UpperStaticA"] = true, ["UpperStaticB"] = true,
+		["LowerStatic"] = true, ["LowerStaticA"] = true,
+		["Bru"] = true
+	}
+
+	local function applyColorsRecursively(obj)
+		for _, v in pairs(obj:GetChildren()) do
+			if v:IsA("BasePart") then
+				v.Transparency = 0
+				if v.Name == "Bra" or v:FindFirstChild("IsColor1") or v.Name == "c1" or v.Name == "color1" then
+					v.Color = Color3.fromRGB(255,203,238)
+				elseif skinParts[v.Name] or v:FindFirstChild("IsColor2") then
+					v.Color = targetColor 
+				elseif v.Name == "Particle1" or v:FindFirstChild("IsColor3") then v.Transparency = 1
+				elseif v.Name == "Particle2" or v.Name == "Particle3" or v:FindFirstChild("IsColor4") then v.Transparency = 1
+				else
+					v.Color = targetColor
+				end
+				v.Anchored = false; v.CanCollide = false
+				if v.Name == "Middle" or v:FindFirstChild("Hidden") then v.Transparency = 1 end
+			elseif v:IsA("Model") or v:IsA("Folder") then
+				applyColorsRecursively(v)
+			end
+		end
+	end
+	applyColorsRecursively(targ)
+end
+
+local function Weld(container)
+	for _, v in pairs(container:GetChildren()) do
+		if v:IsA("Model") or v:IsA("Folder") then
+			Weld(v)
+		elseif v:IsA("BasePart") then
+			if container:FindFirstChild("Middle") then
+				local Weldy = Instance.new("Weld"); Weldy.Part0 = container.Middle; Weldy.Part1 = v
+				local CJ = CFrame.new(container.Middle.Position)
+				local C0 = container.Middle.CFrame:inverse()*CJ; local C1 = v.CFrame:inverse()*CJ
+				Weldy.C0 = C0; Weldy.C1 = C1; Weldy.Parent = container.Middle
+			end
+		end
+	end
+end
+
+local function AddMorph(Morph, Character, IsBot)
+	if not Character or not Morph or Morph == "" then return end
+	if Character:FindFirstChild("Humanoid") == nil then return end
+
+	local g = Morph:Clone()
+	g.Parent = Character
+	Weld(g)
+
+	if IsBot and _G.BOTCorrectColors then
+		_G.BOTCorrectColors(g, Character)
+	else
+		CorrectColors(g, Character)
+	end
+
+	for _, v in pairs(g:GetChildren()) do
+		if Character:FindFirstChild(v.Name) then Character[v.Name]:Destroy() end
+	end
+
+	local torso = Character:FindFirstChild("Torso")
+	if torso then
+		weldMorphPiece(Character, g, "Rod", CFrame.new(0, -torso.Size.Y/2, -torso.Size.Z/2))
+		weldMorphPiece(Character, g, "Orbs", CFrame.new(0, -torso.Size.Y/2, -torso.Size.Z/2))
+		weldMorphPiece(Character, g, "UpperL", CFrame.new(-torso.Size.X/8, torso.Size.Y/2, -torso.Size.Z/2))
+		weldMorphPiece(Character, g, "UpperR", CFrame.new(torso.Size.X/8, torso.Size.Y/2, -torso.Size.Z/2))
+		weldMorphPiece(Character, g, "LowerL", CFrame.new(-torso.Size.X/8, -torso.Size.Y/2, torso.Size.Z/2))
+		weldMorphPiece(Character, g, "LowerR", CFrame.new(torso.Size.X/8, -torso.Size.Y/2, torso.Size.Z/2))
+		weldStaticPiece(Character, g, "UpperStatic")
+		weldStaticPiece(Character, g, "UpperStaticA")
+		weldStaticPiece(Character, g, "UpperStaticB")
+		weldStaticPiece(Character, g, "LowerStatic")
+		weldStaticPiece(Character, g, "LowerStaticA")
+		weldStaticPiece(Character, g, "LowerStaticB")
+	end
+end
+
+local function RemoveMorph(Morph, Character)
+	if not Character or not Morph then return end
+	for _, name in ipairs({"♀","♂"}) do
+		local f = Character:FindFirstChild(name)
+		if f then f:Destroy() end
+	end
+
+	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso")
+	if not torso then return end
+
+	for _, part in pairs(Morph:GetChildren()) do
+		local m6d = torso:FindFirstChild("M6D"..part.Name)
+		if m6d then m6d:Destroy() end
+	end
+	for _, weld in pairs(torso:GetChildren()) do
+		if weld:IsA("Weld") then
+			local p1 = weld.Part1
+			if p1 and Morph:FindFirstChild(p1.Name) then weld:Destroy() end
+		end
+	end
+	for _, part in pairs(Morph:GetChildren()) do
+		local charPart = Character:FindFirstChild(part.Name)
+		if charPart then charPart:Destroy() end
+	end
+end
+
+local function pickMorphTemplateForCharacter(character)
+	if not character then return nil end
+	local owner = Players:GetPlayerFromCharacter(character)
+	local gender = nil
+	local rawGender = safeGetAttribute(character, "Gender")
+
+	if not rawGender and owner and PlayerIdentity[owner.UserId] then rawGender = PlayerIdentity[owner.UserId].Gender end
+	if rawGender then gender = genderCategory(rawGender) end
+
+	if gender == "female" then
+		local femaleTemplate = hatsFolder:FindFirstChild("♀") or morphFolder:FindFirstChild("♀")
+		if femaleTemplate then return femaleTemplate end
+		local alt = hatsFolder:FindFirstChild("Female") or morphFolder:FindFirstChild("Female")
+		if alt then return alt end
+	elseif gender == "male" then 
+		local maleTemplate = hatsFolder:FindFirstChild("♂") or morphFolder:FindFirstChild("♂")
+		if maleTemplate then return maleTemplate end
+		local alt = hatsFolder:FindFirstChild("Male") or morphFolder:FindFirstChild("Male")
+		if alt then return alt end
+	end
+
+	local template = hatsFolder:FindFirstChild("TaskHat")
+	if not template then
+		local hatsChildren = hatsFolder:GetChildren()
+		if #hatsChildren > 0 then template = hatsChildren[1] end
+	end
+	if template then return template end
+
+	local morphChildren = morphFolder:GetChildren()
+	if #morphChildren > 0 then return morphChildren[1] end
+
+	return nil
+end
+
+local function spawnMorphsForPair(charARef, charBRef, record)
+	if not record then return end
+	record.SpawnedHats = record.SpawnedHats or {}
+
+	local participants = {charARef, charBRef}
+	for _, p in ipairs(participants) do
+		if p then
+			local character = nil
+			if typeof(p) == "Instance" then
+				if p:IsA("Player") then character = p.Character end
+				if p:IsA("Model") and p:FindFirstChildOfClass("Humanoid") then character = p end
+			end
+			if character and character:IsA("Model") then
+				local template = pickMorphTemplateForCharacter(character)
+				if template then
+					pcall(function() AddMorph(template, character, false) end)
+					table.insert(record.SpawnedHats, {Character = character, Template = template})
+				end
+			end
+		end
+	end
+end
+
+local function removeSpawnedMorphs(record)
+	if not record or not record.SpawnedHats then return end
+	for _, rec in ipairs(record.SpawnedHats) do
+		if rec and rec.Character and rec.Template then
+			pcall(function() RemoveMorph(rec.Template, rec.Character) end)
+		end
+	end
+	record.SpawnedHats = nil
+end
+
+--------------------------------------------------------------------
+-- ANIMATION UTILS
+--------------------------------------------------------------------
+local function stopCurrentAnimation(playerOrChar)
+	if not Animator then return false end
+	local name = nil
+	if typeof(playerOrChar) == "Instance" then
+		if playerOrChar:IsA("Player") then
+			if playerOrChar.Character then name = playerOrChar.Character.Name end
+		elseif playerOrChar:IsA("Model") then
+			name = playerOrChar.Name
+		end
+	end
+	if not name then return false end
+	local animFolder = workspace:FindFirstChild("boisus")
+	if not animFolder then return false end
+	local animScript = animFolder:FindFirstChild(name)
+	if animScript then
+		pcall(function() Animator.StopAnimation(animScript) end)
+		animScript:Destroy()
+		return true
+	end
+	return false
+end
+
+local function changeSpeedForChar(characterOrModel, speed)
+	if not Animator or not Animator.ChangeAnimationSpeed then return end
+	if not characterOrModel then return end
+	local name = characterOrModel.Name
+	local animFolder = workspace:FindFirstChild("boisus")
+	if animFolder then
+		local animScript = animFolder:FindFirstChild(name)
+		if animScript then
+			pcall(function() Animator.ChangeAnimationSpeed(animScript, speed) end)
+		end
+	end
+end
+
+local function getAnimFromFolder(displayName, roleType)
+	if not displayName or displayName == "" then return nil end
+
+	for _, category in ipairs(animsFolder:GetChildren()) do
+		if category:IsA("Folder") then
+			local root = category:FindFirstChild(displayName)
+			if root then
+				local anim = root:FindFirstChild(roleType)
+				if anim and (anim:IsA("KeyframeSequence") or anim:IsA("Animation")) then 
+					return anim 
+				end
+			end
+		end
+	end
+	return nil
+end
+
+--------------------------------------------------------------------
+-- FINISHER SYSTEM
+--------------------------------------------------------------------
+local function getRandomAnimName()
+	local categories = animsFolder:GetChildren()
+	if #categories == 0 then return nil end
+	local randomCat = categories[math.random(1, #categories)]
+	if randomCat:IsA("Folder") then
+		local anims = randomCat:GetChildren()
+		if #anims == 0 then return nil end
+		return anims[math.random(1, #anims)].Name
+	end
+	return nil
+end
+
+local function CleanupFinisher(finisherId)
+	local data = ActiveFinishers[finisherId]
+	if not data then return end
+
+	if data.Connections then
+		for _, c in ipairs(data.Connections) do if c.Connected then c:Disconnect() end end
+	end
+
+	local fPlayer = data.Finisher
+	local vPlayer = data.Victim
+	local fChar = fPlayer and fPlayer.Character
+	local vChar = vPlayer and (vPlayer:IsA("Player") and vPlayer.Character or vPlayer)
+
+	stopCurrentAnimation(fPlayer)
+	stopCurrentAnimation(vPlayer)
+
+	restoreClothes(data)
+	removeSpawnedMorphs(data)
+
+	if fChar then
+		local fHrp = fChar:FindFirstChild("HumanoidRootPart")
+		if fHrp then fHrp.Anchored = false end
+		fChar:SetAttribute("Invincible", false)
+		fChar:SetAttribute("InFinisher", false)
+	end
+
+	if vChar then
+		local vHrp = vChar:FindFirstChild("HumanoidRootPart")
+		if vHrp then vHrp.Anchored = false end
+		vChar:SetAttribute("Invincible", false)
+		vChar:SetAttribute("InFinisher", false)
+
+		local vHum = vChar:FindFirstChild("Humanoid")
+		if vHum and vHum.Health > 0 and data.Finished then
+			vHum.Health = 0
+		end
+
+		if vHum and vHum.Health <= 75 or data.Finished then
+			Ragdoll.RagdollCharacter(vChar)
+		end
+	end
+
+	ActiveFinishers[finisherId] = nil
+end
+
+local function StartFinisherSequence(finisherPlayer, victimPlayer)
+	if ActiveFinishers[finisherPlayer.UserId] then return end
+	if victimPlayer:IsA("Player") and ActiveFinishers[victimPlayer.UserId] then return end
+
+	local fChar = finisherPlayer.Character
+	local vChar = victimPlayer:IsA("Player") and victimPlayer.Character or victimPlayer
+	if not fChar or not vChar then return end
+
+	local fHrp = fChar:FindFirstChild("HumanoidRootPart")
+	local vHrp = vChar:FindFirstChild("HumanoidRootPart")
+	local fHum = fChar:FindFirstChild("Humanoid")
+	local vHum = vChar:FindFirstChild("Humanoid")
+
+	if not fHrp or not vHrp or not fHum or not vHum then return end
+
+	Ragdoll.UnRagdollCharacter(vChar)
+
+	fChar:SetAttribute("Invincible", true)
+	vChar:SetAttribute("Invincible", true)
+	fChar:SetAttribute("InFinisher", true)
+	vChar:SetAttribute("InFinisher", true)
+
+	local fGender = getPlayerGender(finisherPlayer)
+	local vGender = "male"
+	if victimPlayer:IsA("Player") then 
+		vGender = getPlayerGender(victimPlayer) 
+	else 
+		local gAttr = safeGetAttribute(victimPlayer, "Gender")
+		if gAttr then vGender = genderCategory(gAttr) end
+	end
+
+	local fRole = "Standard"
+	local vRole = "Serious"
+	local forward = fHrp.CFrame.LookVector
+
+	if fGender == "female" and vGender == "male" then
+		fRole = "Serious"
+		vRole = "Standard"
+
+		local victimPos = fHrp.Position - (forward * 1)
+		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
+	else
+		if fGender == "female" then fRole = "Serious" else fRole = "Standard" end
+		if vGender == "female" then vRole = "Serious" else vRole = "Standard" end
+
+		if fRole == vRole then
+			if fRole == "Standard" then vRole = "Serious" else vRole = "Standard" end
+		end
+
+		local victimPos = fHrp.Position + (forward * 1)
+		vHrp.CFrame = CFrame.new(victimPos, victimPos + forward)
+	end
+
+	fHrp.Anchored = true
+	vHrp.Anchored = true
+
+	local data = {
+		Finisher = finisherPlayer,
+		Victim = victimPlayer,
+		StoredClothes = {},
+		SpawnedHats = {},
+		Connections = {},
+		Finished = false
+	}
+	ActiveFinishers[finisherPlayer.UserId] = data
+
+	hideClothes(fChar, data)
+	hideClothes(vChar, data)
+	spawnMorphsForPair(fChar, vChar, data)
+
+	local animName = getRandomAnimName()
+	if animName and Animator then
+		local fAnim = getAnimFromFolder(animName, fRole)
+		local vAnim = getAnimFromFolder(animName, vRole)
+
+		if fAnim then pcall(function() Animator.PlayAnimation(finisherPlayer, fAnim, fChar, false) end) end
+		if vAnim then pcall(function() Animator.PlayAnimation(victimPlayer, vAnim, vChar, false) end) end
+	end
+
+	table.insert(data.Connections, fHum.Died:Connect(function() CleanupFinisher(finisherPlayer.UserId) end))
+	table.insert(data.Connections, vHum.Died:Connect(function() CleanupFinisher(finisherPlayer.UserId) end))
+	table.insert(data.Connections, Players.PlayerRemoving:Connect(function(p)
+		if p == finisherPlayer or p == victimPlayer then CleanupFinisher(finisherPlayer.UserId) end
+	end))
+
+	task.spawn(function()
+		local t = 0
+		while ActiveFinishers[finisherPlayer.UserId] == data and t < 30 do
+			task.wait(1)
+			t += 1
+
+			if t == 10 then
+				changeSpeedForChar(fChar, 1.5)
+				changeSpeedForChar(vChar, 1.5)
+			elseif t == 20 then
+				changeSpeedForChar(fChar, 2.0)
+				changeSpeedForChar(vChar, 2.0)
+			elseif t == 25 then
+				changeSpeedForChar(fChar, 0.25)
+				changeSpeedForChar(vChar, 0.25)
+			elseif t == 30 then
+				data.Finished = true
+				if finisherPlayer:FindFirstChild("leaderstats") and finisherPlayer.leaderstats:FindFirstChild("Kills") then
+					finisherPlayer.leaderstats.Kills.Value += 1
+				end
+				CleanupFinisher(finisherPlayer.UserId)
+			end
+		end
+	end)
+end
+
+--------------------------------------------------------------------
+-- MAP SYSTEM SETUP & CONFIG
+--------------------------------------------------------------------
+local Maps = {
+	["Crossroads"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/mapbro.txt",
+	["Haunted Mansion"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/haunt.txt",
+	["Terraria"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/terrariaa.txt",
+	["Glass Houses"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/glasshouses.txt",
+	["Undertale"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/undr",
+	["Big Map"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/br.txt",
+	["Tree Cave"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/trc",
+	["Retro"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/retr",
+	["Pumpkin Patch"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/pumpkin",
+	["Icebound"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/cc"
+}
+
+local ANIM_URL = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/v4anims.txt"
+pcall(function() Serializer.Animation.LoadFromURL(ANIM_URL, game.ServerStorage) end)
+
+local GAME_TIME = 600
+local VOTE_TIME = 15
+
+local votes = {}
+local tallies = {}
+local validOptions = {}
+local activeMapModel = nil
+local isGameActive = false
+local isVoting = false
+local voteTimeLeft = 0
+
+local function teleportPlayersTo(spawnFolder, playersToMove)
+	if not spawnFolder then return end
+
+	local spawns = {}
+	for _, item in ipairs(spawnFolder:GetChildren()) do
+		if item:IsA("BasePart") or item:IsA("SpawnLocation") then
+			table.insert(spawns, item)
+		end
+	end
+
+	if #spawns == 0 then
+		warn("No valid BasePart spawns in:", spawnFolder.Name)
+		return
+	end
+
+	for _, player in ipairs(playersToMove) do
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local randomSpawn = spawns[math.random(1, #spawns)]
+			player.Character.HumanoidRootPart.CFrame = randomSpawn.CFrame + Vector3.new(0, 3, 0)
+		end
+	end
+end
+
+--------------------------------------------------------------------
+-- PLAYER HEALTH & EVENT LISTENERS
+--------------------------------------------------------------------
+local function setupHealthListener(character)
+	local humanoid = character:WaitForChild("Humanoid")
+	local currentHP = humanoid.Health
+	local isReverting = false
+
+	humanoid.HealthChanged:Connect(function(hp)
+		if isReverting then return end
+
+		if character:GetAttribute("Invincible") and hp > 0 then
+			if hp < currentHP then
+				isReverting = true
+				humanoid.Health = currentHP
+				isReverting = false
+				return
+			end
+		end
+
+		currentHP = humanoid.Health
+
+		if hp >= 100 and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") then
+			character:SetAttribute("IsRagdolled", false)
+			character:SetAttribute("Invincible", false)
+
+			humanoid.PlatformStand = false
+			humanoid.WalkSpeed = 16 
+
+			Ragdoll.UnRagdollCharacter(character)
+
+			local hrp = character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local prompt = hrp:FindFirstChild("FinishPrompt")
+				if prompt then prompt:Destroy() end
+			end
+		end
+
+		if hp > 0 and hp <= 75 and not character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") then
+			character:SetAttribute("IsRagdolled", true)
+			character:SetAttribute("Invincible", true)
+
+			humanoid.PlatformStand = true
+			humanoid.WalkSpeed = 0
+
+			Ragdoll.RagdollCharacter(character)
+
+			local hrp = character:FindFirstChild("HumanoidRootPart")
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "FinishPrompt"
+			prompt.ActionText = "Finish"
+			prompt.ObjectText = character.Name
+			prompt.HoldDuration = 0.5
+			prompt.RequiresLineOfSight = false
+			if hrp then prompt.Parent = hrp end
+
+			local ownerPlayer = Players:GetPlayerFromCharacter(character)
+
+			prompt.Triggered:Connect(function(finisherPlayer)
+				local fChar = finisherPlayer.Character
+				if fChar and fChar:GetAttribute("IsRagdolled") then return end
+
+				if fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.Health > 0 then
+					prompt:Destroy()
+					local target = ownerPlayer or character
+					StartFinisherSequence(finisherPlayer, target)
+				end
+			end)
+
+			task.spawn(function()
+				while character and character.Parent and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") do
+					task.wait(1.5)
+					if humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
+						humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 1)
+					end
+				end
+			end)
+		end
+	end)
+end
+
+local function setupPlayer(player)
+	-- Leaderstats setup
+	local ls = Instance.new("Folder")
+	ls.Name = "leaderstats"
+	ls.Parent = player
+	local kills = Instance.new("IntValue")
+	kills.Name = "Kills"
+	kills.Value = 0
+	kills.Parent = ls
+
+	-- Identity & Client Prompt
+	PlayerIdentity[player.UserId] = {Gender = "New", Age = "?"}
+	TaskEvent:FireClient(player, "PROMPT_SETUP")
+
+	player.CharacterAdded:Connect(function(c)
+		wait(2)
+		print("[SPAWN DEBUG] CharacterAdded fired for:", player.Name)
+
+		-- 1. Wait for the crucial character parts to load first!
+		local hum = c:WaitForChild("Humanoid", 10)
+		local hrp = c:WaitForChild("HumanoidRootPart", 10)
+		local head = c:WaitForChild("Head", 10)
+
+		if not hrp then 
+			warn("[SPAWN DEBUG] Failed to find HumanoidRootPart for " .. player.Name .. " within 10 seconds!")
+			return 
+		end 
+
+		print("[SPAWN DEBUG] Character parts loaded successfully for:", player.Name)
+
+		-- Finisher Setup logic
+		local id2 = PlayerIdentity[player.UserId]
+		if id2 and c.SetAttribute then pcall(function() c:SetAttribute("Gender", id2.Gender); c:SetAttribute("Age", id2.Age) end) end
+		updateOverheadName(c, player.DisplayName)
+		task.spawn(setupHealthListener, c)
+
+		-- 2. Map Voting & Spawn Teleport logic
+		if isVoting and voteTimeLeft > 0 then
+			VoteStartEvent:FireClient(player, validOptions, voteTimeLeft)
+		end
+
+		print("[SPAWN DEBUG] Game Active Status:", isGameActive)
+
+		if isGameActive and activeMapModel and activeMapModel:FindFirstChild("Spawns") then
+			print("[SPAWN DEBUG] Teleporting to Active Map Spawns.")
+			teleportPlayersTo(activeMapModel.Spawns, {player})
+		else
+			print("[SPAWN DEBUG] Attempting to teleport to Lobby Spawns...")
+			local lobby = workspace:FindFirstChild("Lobby")
+			if not lobby then
+				warn("[SPAWN DEBUG ERROR] There is no model/folder named 'Lobby' in the Workspace!")
+				return
+			end
+
+			local lobbySpawns = lobby:FindFirstChild("Spawns")
+			if lobbySpawns then
+				print("[SPAWN DEBUG] Found workspace.Lobby.Spawns! Teleporting player now.")
+				teleportPlayersTo(lobbySpawns, {player})
+			else
+				warn("[SPAWN DEBUG ERROR] Found 'Lobby', but could not find a 'Spawns' folder inside it!")
+			end
+		end
+	end)
+	-- Check for pre-existing character on late joins
+	if player.Character and player.Character.Parent then
+		task.spawn(function()
+			pcall(function() player.Character:WaitForChild("Humanoid",10); player.Character:WaitForChild("Head",10) end)
+			updateOverheadName(player.Character, player.DisplayName)
+			task.spawn(setupHealthListener, player.Character)
+		end)
+	end
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+
+Players.PlayerRemoving:Connect(function(p)
+	local activeAsFinisher = ActiveFinishers[p.UserId]
+	if activeAsFinisher then
+		CleanupFinisher(p.UserId)
+	else
+		for fid, data in pairs(ActiveFinishers) do
+			if data.Victim == p then
+				CleanupFinisher(fid)
+				break
+			end
+		end
+	end
+
+	if PlayerDummies[p] then
+		PlayerDummies[p]:Destroy()
+		PlayerDummies[p] = nil
+	end
+
+	PlayerIdentity[p.UserId] = nil
+end)
+
+-- Initialize players already in-game
+for _, p in pairs(Players:GetPlayers()) do
+	task.spawn(function() setupPlayer(p) end)
+end
+
+--------------------------------------------------------------------
+-- CLIENT REMOTE HANDLERS
+--------------------------------------------------------------------
+TaskEvent.OnServerEvent:Connect(function(player, action, arg1, arg2)
+	if action == "SET_IDENTITY" then
+		PlayerIdentity[player.UserId] = {Gender = arg1, Age = arg2}
+		if player.Character and player.Character.SetAttribute then
+			pcall(function() player.Character:SetAttribute("Gender", arg1); player.Character:SetAttribute("Age", arg2) end)
+		end
+		if player.Character then updateOverheadName(player.Character, player.DisplayName) end
+	end
+end)
+
+morphEvent.OnServerEvent:Connect(function(player, action, arg1)
+	local char = player.Character
+	if not char then return end
+
+	if action == "MORPH" then
+		if arg1 == "Reset" then player:LoadCharacter() else
+			local m = morphFolder:FindFirstChild(arg1)
+			if m and char then
+				for _, v in pairs(char:GetChildren()) do if v:IsA("Accessory") or v:IsA("Clothing") then v:Destroy() end end
+				for _, v in pairs(m:GetChildren()) do v:Clone().Parent = char end
+			end
+		end
+	end
+end)
+
+CastVoteEvent.OnServerEvent:Connect(function(player, mapName)
+	if table.find(validOptions, mapName) then
+		votes[player] = mapName
+		tallies = {}
+		for _, v in pairs(votes) do
+			tallies[v] = (tallies[v] or 0) + 1
+		end
+		UpdateVotesEvent:FireAllClients(tallies)
+	end
+end)
+
+--------------------------------------------------------------------
+-- MAIN MAP ROUND LOOP
+--------------------------------------------------------------------
+task.spawn(function()
+	while true do
+		isGameActive = false
+		isVoting = false
+		table.clear(votes)
+		table.clear(tallies)
+		table.clear(validOptions)
+
+		local allMapKeys = {}
+		for mapName, _ in pairs(Maps) do table.insert(allMapKeys, mapName) end
+
+		for i = #allMapKeys, 2, -1 do
+			local j = math.random(i)
+			allMapKeys[i], allMapKeys[j] = allMapKeys[j], allMapKeys[i]
+		end
+
+		for i = 1, math.min(3, #allMapKeys) do table.insert(validOptions, allMapKeys[i]) end
+
+		isVoting = true
+		VoteStartEvent:FireAllClients(validOptions, VOTE_TIME)
+
+		for i = VOTE_TIME, 0, -1 do
+			voteTimeLeft = i
+			TimerUpdateEvent:FireAllClients("Voting Ends In: " .. voteTimeLeft)
+			task.wait(1)
+		end
+
+		isVoting = false
+
+		local winningMapName = validOptions[1] 
+		local highestVotes = -1
+		for mapName, count in pairs(tallies) do
+			if count > highestVotes then
+				highestVotes = count
+				winningMapName = mapName
+			end
+		end
+
+		TimerUpdateEvent:FireAllClients("Loading: " .. winningMapName .. "...")
+		task.wait(2) 
+
+		local dataUrl = Maps[winningMapName]
+		activeMapModel = Serializer.Map.LoadFromURL(dataUrl, workspace)
+
+		isGameActive = true
+
+		if activeMapModel and activeMapModel:FindFirstChild("Spawns") then
+			teleportPlayersTo(activeMapModel.Spawns, Players:GetPlayers())
+		end
+
+		for i = (GAME_TIME - VOTE_TIME), 0, -1 do
+			local minutes = math.floor(i / 60)
+			local seconds = i % 60
+			TimerUpdateEvent:FireAllClients(string.format("Next Game In: %02d:%02d", minutes, seconds))
+			task.wait(1)
+		end
+
+		if activeMapModel then
+			activeMapModel:Destroy()
+			activeMapModel = nil
+		end
+
+		local lobbySpawns = workspace:FindFirstChild("Lobby") and workspace.Lobby:FindFirstChild("Spawns")
+		teleportPlayersTo(lobbySpawns, Players:GetPlayers())
+	end
+end)
