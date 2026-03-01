@@ -694,7 +694,6 @@ local Maps = {
 	["Haunted Mansion"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/haunt.txt",
 	["Terraria"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/terrariaa.txt",
 	["Glass Houses"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/glasshouses.txt",
-	["Undertale"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/undr",
 	["Big Map"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/br.txt",
 	["Tree Cave"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/trc",
 	["Retro"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/retr",
