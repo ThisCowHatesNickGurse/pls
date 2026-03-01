@@ -690,6 +690,7 @@ local function teleportPlayersTo(spawnFolder, playersToMove)
 	local spawns = {}
 	for _, item in ipairs(spawnFolder:GetChildren()) do
 		if item:IsA("BasePart") or item:IsA("SpawnLocation") then
+			item.CanCollide = false
 			table.insert(spawns, item)
 		end
 	end
@@ -806,7 +807,7 @@ local function setupPlayer(player)
 	TaskEvent:FireClient(player, "PROMPT_SETUP")
 
 	player.CharacterAdded:Connect(function(c)
-		wait(2)
+		wait(3.5)
 		print("[SPAWN DEBUG] CharacterAdded fired for:", player.Name)
 
 		-- Wait for the crucial character parts to load first
