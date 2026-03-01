@@ -660,16 +660,22 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 			task.wait(1)
 			t += 1
 
-			if t == 10 then
-				changeSpeedForChar(fChar, 1.5)
-				changeSpeedForChar(vChar, 1.5)
-			elseif t == 20 then
+			if t == 20 then
+				changeSpeedForChar(fChar, 1.2)
+				changeSpeedForChar(vChar, 1.2)
+			elseif t == 40 then
 				changeSpeedForChar(fChar, 2.0)
 				changeSpeedForChar(vChar, 2.0)
-			elseif t == 25 then
+			elseif t == 60 then
+				changeSpeedForChar(fChar, 2.0)
+				changeSpeedForChar(vChar, 2.0)
+			elseif t == 75 then
+				changeSpeedForChar(fChar, 3.0)
+				changeSpeedForChar(vChar, 3.0)
+			elseif t == 85 then
 				changeSpeedForChar(fChar, 0.25)
 				changeSpeedForChar(vChar, 0.25)
-			elseif t == 30 then
+			elseif t == 95 then
 				data.Finished = true
 				if finisherPlayer:FindFirstChild("leaderstats") and finisherPlayer.leaderstats:FindFirstChild("Kills") then
 					finisherPlayer.leaderstats.Kills.Value += 1
