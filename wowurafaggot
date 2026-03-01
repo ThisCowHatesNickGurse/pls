@@ -632,14 +632,25 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local fPri = priorities[fGender] or 1
 	local vPri = priorities[vGender] or 1
 
-	local fRole = "Standard"
-	local vRole = "Standard"
+	-- ==========================================
+	-- ROLE ASSIGNMENT LOGIC
+	-- ==========================================
+	local fRole = ""
+	local vRole = ""
 
-	if fGender == "femboy" then fRole = "Serious" end
-	if vGender == "femboy" then vRole = "Serious" end
-	if fGender == "female" and vGender == "male" then fRole = "Serious" end
-	if vGender == "female" and fGender == "male" then vRole = "Serious" end
-
+	if fGender == "female" or fGender == "femboy" then
+		-- Girl/Femboy finishing anyone
+		fRole = "Serious"
+		vRole = "Standard"
+	elseif fGender == "male" then
+		-- Male finishing anyone
+		fRole = "Standard"
+		vRole = "Serious"
+	else
+		-- Fallback/Neutral case: just ensure they aren't the same
+		fRole = "Serious"
+		vRole = "Standard"
+	end
 	if fRole == vRole then
 		if fRole == "Standard" then vRole = "Serious" else vRole = "Standard" end
 	end
