@@ -810,21 +810,6 @@ end
 --------------------------------------------------------------------
 -- PLAYER HEALTH & EVENT LISTENERS
 --------------------------------------------------------------------
-
--- Helper function to generate custom-styled prompts on the fly
-local function createCustomPrompt(name, actionText, objectText, keycode, offset)
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = name
-	prompt.ActionText = actionText
-	prompt.ObjectText = objectText
-	prompt.KeyboardKeyCode = keycode
-	prompt.UIOffset = offset
-	prompt.Style = Enum.ProximityPromptStyle.Custom -- Applies custom style
-	prompt.RequiresLineOfSight = false
-	prompt.MaxActivationDistance = 8
-	return prompt
-end
-
 local function setupHealthListener(character)
 	local humanoid = character:WaitForChild("Humanoid")
 	local currentHP = humanoid.Health
@@ -849,8 +834,6 @@ local function setupHealthListener(character)
 		if hp >= 100 and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") then
 			character:SetAttribute("IsRagdolled", false)
 			character:SetAttribute("Invincible", false)
-			character:SetAttribute("IsCarried", false) -- Clear carry state
-			character:SetAttribute("CarrierUserId", nil) -- Clear carrier lock
 
 			humanoid.PlatformStand = false
 			humanoid.WalkSpeed = 16 
@@ -860,11 +843,8 @@ local function setupHealthListener(character)
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
 			if hrp then
-				-- Cleanup prompts and welds
-				if hrp:FindFirstChild("FinishPrompt") then hrp.FinishPrompt:Destroy() end
-				if hrp:FindFirstChild("ExecutePrompt") then hrp.ExecutePrompt:Destroy() end
-				if hrp:FindFirstChild("CarryPrompt") then hrp.CarryPrompt:Destroy() end
-				if hrp:FindFirstChild("CarryWeld") then hrp.CarryWeld:Destroy() end
+				local prompt = hrp:FindFirstChild("FinishPrompt")
+				if prompt then prompt:Destroy() end
 			end
 		end
 
@@ -880,123 +860,24 @@ local function setupHealthListener(character)
 			RemoveSword(ownerPlayer) 
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
-			
-			if hrp then
-				-- 1. FINISH PROMPT
-				local finishPrompt = createCustomPrompt("FinishPrompt", "Finish", character.Name, Enum.KeyCode.F, Vector2.new(60, 0))
-				finishPrompt.Parent = hrp
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "FinishPrompt"
+			prompt.ActionText = "Finish"
+			prompt.ObjectText = character.Name
+			prompt.HoldDuration = 0.5
+			prompt.RequiresLineOfSight = false
+			if hrp then prompt.Parent = hrp end
 
-				-- 2. EXECUTE / GLORY PROMPT
-				local executePrompt = createCustomPrompt("ExecutePrompt", "Execute", character.Name, Enum.KeyCode.X, Vector2.new(-60, 0))
-				executePrompt.Parent = hrp
+			prompt.Triggered:Connect(function(finisherPlayer)
+				local fChar = finisherPlayer.Character
+				if fChar and fChar:GetAttribute("IsRagdolled") then return end
 
-				-- 3. CARRY PROMPT
-				local carryPrompt = createCustomPrompt("CarryPrompt", "Carry", character.Name, Enum.KeyCode.C, Vector2.new(0, -60))
-				carryPrompt.Parent = hrp
-
-				-- PROMPT CONNECTIONS --
-
-				-- Finish Logic
-				finishPrompt.Triggered:Connect(function(finisherPlayer)
-					local fChar = finisherPlayer.Character
-					if fChar and fChar:GetAttribute("IsRagdolled") then return end
-
-					if fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.Health > 0 then
-						finishPrompt:Destroy()
-						executePrompt:Destroy()
-						carryPrompt:Destroy()
-						local target = ownerPlayer or character
-						StartFinisherSequence(finisherPlayer, target)
-					end
-				end)
-
-				-- Execute Logic
-				executePrompt.Triggered:Connect(function(executorPlayer)
-					local eChar = executorPlayer.Character
-					if eChar and eChar:GetAttribute("IsRagdolled") then return end
-
-					if eChar and eChar:FindFirstChild("Humanoid") and eChar.Humanoid.Health > 0 then
-						-- Give leaderstats kill
-						local leaderstats = executorPlayer:FindFirstChild("leaderstats")
-						if leaderstats and leaderstats:FindFirstChild("Kills") then
-							leaderstats.Kills.Value += 1
-						end
-						
-						-- Kill the target
-						character:SetAttribute("Invincible", false)
-						humanoid.Health = 0
-						
-						finishPrompt:Destroy()
-						executePrompt:Destroy()
-						carryPrompt:Destroy()
-					end
-				end)
-
-				-- Carry / Drop Logic
-				carryPrompt.Triggered:Connect(function(carrierPlayer)
-					local cChar = carrierPlayer.Character
-					if cChar and cChar:GetAttribute("IsRagdolled") then return end
-					
-					local carrierHrp = cChar:FindFirstChild("HumanoidRootPart")
-					if not carrierHrp then return end
-
-					local isCarried = character:GetAttribute("IsCarried")
-					local currentCarrierId = character:GetAttribute("CarrierUserId")
-					
-					if not isCarried then
-						-- START CARRYING
-						character:SetAttribute("IsCarried", true)
-						character:SetAttribute("CarrierUserId", carrierPlayer.UserId) -- Lock to this player
-						
-						finishPrompt.Enabled = false
-						executePrompt.Enabled = false
-						
-						carryPrompt.ActionText = "Drop"
-						carryPrompt.KeyboardKeyCode = Enum.KeyCode.Q -- Changes keybind to Q to drop
-						
-						-- Weld the body to the carrier
-						local weld = Instance.new("Weld")
-						weld.Name = "CarryWeld"
-						weld.Part0 = carrierHrp
-						weld.Part1 = hrp
-						-- Offset to carry on the back/shoulder
-						weld.C0 = CFrame.new(0, 1, 1) * CFrame.Angles(math.rad(-90), 0, 0) 
-						weld.Parent = hrp
-						
-						-- Make the target massless so they don't weigh down the carrier
-						for _, part in ipairs(character:GetDescendants()) do
-							if part:IsA("BasePart") then
-								part.Massless = true
-								part.CanCollide = false
-							end
-						end
-					else
-						-- DROP
-						-- Prevent anyone else from dropping the body
-						if currentCarrierId ~= carrierPlayer.UserId then return end
-
-						character:SetAttribute("IsCarried", false)
-						character:SetAttribute("CarrierUserId", nil) -- Unlock
-						
-						finishPrompt.Enabled = true
-						executePrompt.Enabled = true
-						
-						carryPrompt.ActionText = "Carry"
-						carryPrompt.KeyboardKeyCode = Enum.KeyCode.C -- Changes back to C
-						
-						if hrp:FindFirstChild("CarryWeld") then
-							hrp.CarryWeld:Destroy()
-						end
-						
-						-- Restore Mass properties
-						for _, part in ipairs(character:GetDescendants()) do
-							if part:IsA("BasePart") then
-								part.Massless = false
-							end
-						end
-					end
-				end)
-			end
+				if fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.Health > 0 then
+					prompt:Destroy()
+					local target = ownerPlayer or character
+					StartFinisherSequence(finisherPlayer, target)
+				end
+			end)
 
 			task.spawn(function()
 				while character and character.Parent and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") do
@@ -1009,6 +890,7 @@ local function setupHealthListener(character)
 		end
 	end)
 end
+
 local function setupPlayer(player)
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"
