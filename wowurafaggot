@@ -91,12 +91,13 @@ local function SetupCarryPrompt(character, verticalOffset)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "CarryPrompt"
 	prompt.ActionText = "Carry"
+	prompt.KeyboardKeyCode = Enum.KeyCode.C -- Use C as requested
 	prompt.ObjectText = character.Name
 	prompt.HoldDuration = 0.5
 	prompt.MaxActivationDistance = 8
 	prompt.UIOffset = Vector2.new(0, verticalOffset or 0) 
 	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow 
-	prompt.RequiresLineOfSight = false -- Ensure visibility from all angles
+	prompt.RequiresLineOfSight = false
 	prompt.Parent = hrp
 	
 	prompt.Triggered:Connect(function(player)
@@ -110,6 +111,15 @@ local function SetupCarryPrompt(character, verticalOffset)
 		local carrierHrp = carrierChar:FindFirstChild("HumanoidRootPart")
 		if not victimHrp or not carrierHrp then return end
 		
+		-- USER REQUEST: Stop health regen and disable collision
+		character:SetAttribute("IsBeingCarried", true)
+		victimHrp.CanCollide = false
+		
+		-- Hide other prompts while being carried
+		prompt.Enabled = false
+		local fp = victimHrp:FindFirstChild("FinishPrompt")
+		if fp then fp.Enabled = false end
+
 		-- Logic to weld victim to carrier
 		local weld = Instance.new("Weld")
 		weld.Name = "CarryWeld"
@@ -123,16 +133,37 @@ local function SetupCarryPrompt(character, verticalOffset)
 		val.Value = character
 		val.Parent = carrierChar
 		
-		prompt.Enabled = false
-		
-		-- Stop carrying on jump/drop
+		-- Add Drop Prompt to carrier
+		local dropPrompt = Instance.new("ProximityPrompt")
+		dropPrompt.Name = "DropPrompt"
+		dropPrompt.ActionText = "Drop"
+		dropPrompt.KeyboardKeyCode = Enum.KeyCode.C
+		dropPrompt.ObjectText = character.Name
+		dropPrompt.HoldDuration = 0
+		dropPrompt.Parent = carrierHrp
+
+		local function Drop()
+			if weld then weld:Destroy() end
+			if val then val:Destroy() end
+			if dropPrompt then dropPrompt:Destroy() end
+			
+			character:SetAttribute("IsBeingCarried", false)
+			victimHrp.CanCollide = true
+			
+			if victimHrp:FindFirstChild("CarryPrompt") then victimHrp.CarryPrompt.Enabled = true end
+			if victimHrp:FindFirstChild("FinishPrompt") then victimHrp.FinishPrompt.Enabled = true end
+		end
+
 		local hum = carrierChar:FindFirstChild("Humanoid")
 		local conn
 		conn = hum.Jumping:Connect(function()
-			weld:Destroy()
-			val:Destroy()
-			prompt.Enabled = true
-			conn:Disconnect()
+			Drop()
+			if conn then conn:Disconnect() end
+		end)
+		
+		dropPrompt.Triggered:Connect(function()
+			Drop()
+			if conn then conn:Disconnect() end
 		end)
 	end)
 end
@@ -920,6 +951,7 @@ local function setupHealthListener(character)
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "FinishPrompt"
 			prompt.ActionText = "Finish"
+			prompt.KeyboardKeyCode = Enum.KeyCode.C -- Use C
 			prompt.ObjectText = character.Name
 			prompt.HoldDuration = 0.5
 			prompt.UIOffset = Vector2.new(0, 0) -- Use UIOffset
@@ -947,9 +979,11 @@ local function setupHealthListener(character)
 				pcall(SetupCarryPrompt, character, 60)
 			end)
 
+			-- RAGDOLL REGROWTH LOOP (STOP IF CARRIED)
 			task.spawn(function()
 				while character and character.Parent and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") do
 					task.wait(1.5)
+					if character:GetAttribute("IsBeingCarried") then continue end -- USER REQUEST: No health regen while carried
 					if humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
 						humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 1)
 					end
