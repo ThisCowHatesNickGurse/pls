@@ -82,7 +82,9 @@ local SpawnRemote = getOrCreateRemote("RemoteEvent", "SpawnRemote", ReplicatedSt
 -- CARRY SYSTEM
 --------------------------------------------------------------------
 local function SetupCarryPrompt(character)
-	local hrp = character:WaitForChild("HumanoidRootPart")
+	local hrp = character:WaitForChild("HumanoidRootPart", 5) -- Add timeout to prevent infinite yield
+	if not hrp then return end
+	
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Carry"
 	prompt.ObjectText = character.Name
@@ -573,13 +575,22 @@ end
 --------------------------------------------------------------------
 local function getRandomAnimName()
 	local categories = animsFolder:GetChildren()
-	if #categories == 0 then return nil end
+	if #categories == 0 then 
+		return nil 
+	end
+
 	local randomCat = categories[math.random(1, #categories)]
 	if randomCat:IsA("Folder") then
 		local anims = randomCat:GetChildren()
-		if #anims == 0 then return nil end
-		return anims[math.random(1, #anims)].Name
+		if #anims == 0 then 
+			return nil 
+		end
+
+		local chosenName = anims[math.random(1, #anims)].Name
+		print("Selected animation:", chosenName) -- print it
+		return chosenName
 	end
+
 	return nil
 end
 
