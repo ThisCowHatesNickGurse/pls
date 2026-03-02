@@ -179,6 +179,7 @@ local function SetupCarryPrompt(character, verticalOffset)
 			
 			if victimHrp:FindFirstChild("CarryPrompt") then victimHrp.CarryPrompt.Enabled = true end
 			if victimHrp:FindFirstChild("FinishPrompt") then victimHrp.FinishPrompt.Enabled = true end
+			if victimHrp:FindFirstChild("ExecutePrompt") then victimHrp.ExecutePrompt.Enabled = true end
 		end
 
 		local hum = carrierChar:FindFirstChild("Humanoid")
@@ -960,6 +961,8 @@ local function setupHealthListener(character)
 				if fp then fp:Destroy() end
 				local cp = hrp:FindFirstChild("CarryPrompt")
 				if cp then cp:Destroy() end
+				local ep = hrp:FindFirstChild("ExecutePrompt")
+				if ep then ep:Destroy() end
 			end
 		end
 
@@ -975,13 +978,15 @@ local function setupHealthListener(character)
 			RemoveSword(ownerPlayer) 
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
+			
+			-- 1. FINISH PROMPT (Key: F)
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "FinishPrompt"
 			prompt.ActionText = "Finish"
-			prompt.KeyboardKeyCode = Enum.KeyCode.C -- Use C
+			prompt.KeyboardKeyCode = Enum.KeyCode.F -- USER REQUEST: Use F
 			prompt.ObjectText = character.Name
 			prompt.HoldDuration = 0.5
-			prompt.UIOffset = Vector2.new(0, 0) -- Use UIOffset
+			prompt.UIOffset = Vector2.new(0, 0) -- Middle
 			prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 			prompt.RequiresLineOfSight = false
 			if hrp then prompt.Parent = hrp end
@@ -991,19 +996,49 @@ local function setupHealthListener(character)
 				if fChar and fChar:GetAttribute("IsRagdolled") then return end
 
 				if fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.Health > 0 then
+					-- Cleanup all 3 prompts
 					prompt:Destroy()
-					-- Ensure we cleanup the carry prompt too if they are finished
-					local cp = character.HumanoidRootPart:FindFirstChild("CarryPrompt")
+					local cp = hrp:FindFirstChild("CarryPrompt")
 					if cp then cp:Destroy() end
+					local ep = hrp:FindFirstChild("ExecutePrompt")
+					if ep then ep:Destroy() end
 					
 					local target = ownerPlayer or character
 					StartFinisherSequence(finisherPlayer, target)
 				end
 			end)
 
-			-- Add Carry Prompt when ragdolled (Above the finish prompt, UIOffset uses pixels)
+			-- 2. EXECUTE PROMPT (Key: V, Instant Kill)
+			local execPrompt = Instance.new("ProximityPrompt")
+			execPrompt.Name = "ExecutePrompt"
+			execPrompt.ActionText = "Execute"
+			execPrompt.KeyboardKeyCode = Enum.KeyCode.V -- Different key to avoid conflict
+			execPrompt.ObjectText = character.Name
+			execPrompt.HoldDuration = 0.3
+			execPrompt.UIOffset = Vector2.new(0, -60) -- Bottom
+			execPrompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
+			execPrompt.RequiresLineOfSight = false
+			if hrp then execPrompt.Parent = hrp end
+
+			execPrompt.Triggered:Connect(function(killerPlayer)
+				if hrp and human and human.Health > 0 then
+					-- Cleanup
+					execPrompt:Destroy()
+					local cp = hrp:FindFirstChild("CarryPrompt")
+					if cp then cp:Destroy() end
+					local fp = hrp:FindFirstChild("FinishPrompt")
+					if fp then fp:Destroy() end
+
+					human.Health = 0
+					if killerPlayer:FindFirstChild("leaderstats") and killerPlayer.leaderstats:FindFirstChild("Kills") then
+						killerPlayer.leaderstats.Kills.Value += 1
+					end
+				end
+			end)
+
+			-- 3. CARRY PROMPT (Key: C)
 			task.spawn(function()
-				pcall(SetupCarryPrompt, character, 60)
+				pcall(SetupCarryPrompt, character, 60) -- Top
 			end)
 
 			-- RAGDOLL REGROWTH LOOP (STOP IF CARRIED)
