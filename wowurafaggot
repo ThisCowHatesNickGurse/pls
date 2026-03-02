@@ -658,7 +658,8 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	vChar:SetAttribute("InFinisher", true)
 
 	-- PRIORITY & POSITIONING LOGIC (Femboy > Female > Male)
-	local priorities = {femboy = 3, female = 2, male = 1, neutral = 1}
+-- PRIORITY & POSITIONING LOGIC (Female > Femboy > Male)
+	local priorities = {female = 3, femboy = 2, male = 1, neutral = 1}
 	local fPri = priorities[fGender] or 1
 	local vPri = priorities[vGender] or 1
 
@@ -668,25 +669,15 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local fRole = ""
 	local vRole = ""
 
-	if fGender == "female" and vGender == "femboy" then
-   		-- Special case: Girl finishes Femboy
-  	  fRole = "Serious"
- 	   vRole = "Standard"
-	elseif fGender == "female" or fGender == "femboy" then
- 	   -- Original logic: Girl/Femboy finishing anyone else
- 	   fRole = "Serious"
-	    vRole = "Standard"
-	elseif fGender == "male" then
-	    -- Male finishing anyone
-	    fRole = "Standard"
-	    vRole = "Serious"
+	if fPri > vPri then
+		fRole = "Serious"
+		vRole = "Standard"
+	elseif vPri > fPri then
+		fRole = "Standard"
+		vRole = "Serious"
 	else
-	    -- Fallback
-	    fRole = "Serious"
-	    vRole = "Standard"
-	end
-	if fRole == vRole then
-		if fRole == "Standard" then vRole = "Serious" else vRole = "Standard" end
+		fRole = "Serious"
+		vRole = "Standard"
 	end
 
 	local forward = fHrp.CFrame.LookVector
@@ -900,7 +891,11 @@ local function setupPlayer(player)
 	kills.Value = 0
 	kills.Parent = ls
 
-	PlayerIdentity[player.UserId] = {Gender = "New", Age = "?"}
+	-- FIX: Only initialize as "New" if they don't have a saved identity already
+	if not PlayerIdentity[player.UserId] then
+		PlayerIdentity[player.UserId] = {Gender = "New", Age = "?"}
+	end
+	
 	TaskEvent:FireClient(player, "PROMPT_SETUP")
 
 	player.CharacterAdded:Connect(function(c)
@@ -909,8 +904,15 @@ local function setupPlayer(player)
 		local head = c:WaitForChild("Head", 10)
 		if not hrp then return end 
 
+		-- FIX: Retrieve the saved identity from the table and apply it as attributes
 		local id2 = PlayerIdentity[player.UserId]
-		if id2 and c.SetAttribute then pcall(function() c:SetAttribute("Gender", id2.Gender); c:SetAttribute("Age", id2.Age) end) end
+		if id2 and c.SetAttribute then 
+			pcall(function() 
+				c:SetAttribute("Gender", id2.Gender)
+				c:SetAttribute("Age", id2.Age) 
+			end) 
+		end
+		
 		updateOverheadName(c, player.DisplayName)
 		task.spawn(setupHealthListener, c)
 
@@ -934,13 +936,25 @@ local function setupPlayer(player)
 	
 	if player.Character and player.Character.Parent then
 		task.spawn(function()
-			pcall(function() player.Character:WaitForChild("Humanoid",10); player.Character:WaitForChild("Head",10) end)
+			pcall(function() 
+				player.Character:WaitForChild("Humanoid",10)
+				player.Character:WaitForChild("Head",10) 
+			end)
+			
+			-- Ensure the very first spawn also respects the saved identity
+			local id2 = PlayerIdentity[player.UserId]
+			if id2 and player.Character.SetAttribute then
+				pcall(function()
+					player.Character:SetAttribute("Gender", id2.Gender)
+					player.Character:SetAttribute("Age", id2.Age)
+				end)
+			end
+			
 			updateOverheadName(player.Character, player.DisplayName)
 			task.spawn(setupHealthListener, player.Character)
 		end)
 	end
 end
-
 Players.PlayerAdded:Connect(setupPlayer)
 
 Players.PlayerRemoving:Connect(function(p)
@@ -973,11 +987,26 @@ end
 --------------------------------------------------------------------
 TaskEvent.OnServerEvent:Connect(function(player, action, arg1, arg2)
 	if action == "SET_IDENTITY" then
-		PlayerIdentity[player.UserId] = {Gender = arg1, Age = arg2}
-		if player.Character and player.Character.SetAttribute then
-			pcall(function() player.Character:SetAttribute("Gender", arg1); player.Character:SetAttribute("Age", arg2) end)
+		-- Save to the server-side table (This persists until they leave the server)
+		PlayerIdentity[player.UserId] = {
+			Gender = tostring(arg1 or "New"), 
+			Age = tostring(arg2 or "?")
+		}
+		
+		-- Apply to the current character
+		local character = player.Character
+		if character then
+			if character.SetAttribute then
+				pcall(function() 
+					character:SetAttribute("Gender", arg1)
+					character:SetAttribute("Age", arg2) 
+				end)
+			end
+			-- Refresh the overhead UI immediately
+			updateOverheadName(character, player.DisplayName)
 		end
-		if player.Character then updateOverheadName(player.Character, player.DisplayName) end
+		
+		print(string.format("[Identity] Saved %s: %s, %s", player.Name, arg1, arg2))
 	end
 end)
 
