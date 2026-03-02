@@ -668,18 +668,22 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local fRole = ""
 	local vRole = ""
 
-	if fGender == "female" or fGender == "femboy" then
-		-- Girl/Femboy finishing anyone
-		fRole = "Serious"
-		vRole = "Standard"
+	if fGender == "female" and vGender == "femboy" then
+   		-- Special case: Girl finishes Femboy
+  	  fRole = "Serious"
+ 	   vRole = "Standard"
+	elseif fGender == "female" or fGender == "femboy" then
+ 	   -- Original logic: Girl/Femboy finishing anyone else
+ 	   fRole = "Serious"
+	    vRole = "Standard"
 	elseif fGender == "male" then
-		-- Male finishing anyone
-		fRole = "Standard"
-		vRole = "Serious"
+	    -- Male finishing anyone
+	    fRole = "Standard"
+	    vRole = "Serious"
 	else
-		-- Fallback/Neutral case: just ensure they aren't the same
-		fRole = "Serious"
-		vRole = "Standard"
+	    -- Fallback
+	    fRole = "Serious"
+	    vRole = "Standard"
 	end
 	if fRole == vRole then
 		if fRole == "Standard" then vRole = "Serious" else vRole = "Standard" end
