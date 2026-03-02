@@ -130,12 +130,42 @@ end
 
 local function getPlayerGender(player)
 	if not player then return "neutral" end
+	
+	-- 1. Check server-stored identity
 	local id = PlayerIdentity[player.UserId]
-	if id and id.Gender then return genderCategory(id.Gender) end
-	if player.Character then
-		local g = safeGetAttribute(player.Character, "Gender")
-		if g then return genderCategory(g) end
+	if id and id.Gender and id.Gender ~= "New" and id.Gender ~= "" then 
+		return genderCategory(id.Gender) 
 	end
+	
+	if player.Character then
+		-- 2. Check character attribute
+		local g = safeGetAttribute(player.Character, "Gender")
+		if g and g ~= "New" and g ~= "" then 
+			return genderCategory(g) 
+		end
+		
+		-- 3. Fallback: Parse the BillboardGui text
+		local head = player.Character:FindFirstChild("Head")
+		if head then
+			local bb = head:FindFirstChild("RP_Billboard")
+			if bb then
+				local infoLabel = bb:FindFirstChild("InfoLabel")
+				if infoLabel and infoLabel.Text then
+					-- Text format is usually "Age  |  Gender", so we split by "|"
+					local splitText = string.split(infoLabel.Text, "|")
+					if #splitText >= 2 then
+						-- Grab the last segment and trim whitespace
+						local extractedGender = splitText[#splitText]:match("^%s*(.-)%s*$")
+						if extractedGender and extractedGender ~= "New" and extractedGender ~= "" then
+							return genderCategory(extractedGender)
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	-- Default to neutral if all checks fail
 	return "neutral"
 end
 
