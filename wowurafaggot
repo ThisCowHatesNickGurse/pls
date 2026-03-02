@@ -978,7 +978,7 @@ local function setupHealthListener(character)
 			local prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "FinishPrompt"
 			prompt.ActionText = "Finish"
-			prompt.KeyboardKeyCode = Enum.KeyCode.C -- Use C
+			prompt.KeyboardKeyCode = Enum.KeyCode.F -- USER REQUEST: Use F
 			prompt.ObjectText = character.Name
 			prompt.HoldDuration = 0.5
 			prompt.UIOffset = Vector2.new(0, 0) -- Use UIOffset
