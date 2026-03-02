@@ -111,9 +111,28 @@ local function SetupCarryPrompt(character, verticalOffset)
 		local carrierHrp = carrierChar:FindFirstChild("HumanoidRootPart")
 		if not victimHrp or not carrierHrp then return end
 		
-		-- USER REQUEST: Stop health regen and disable collision
+		-- USER REQUEST: Stop health regen and disable weight/collision
 		character:SetAttribute("IsBeingCarried", true)
-		victimHrp.CanCollide = false
+		
+		-- FIX: Disable collision and weight for ALL parts to stop weighing down the carrier
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+				part.Massless = true
+			end
+		end
+		
+		-- FIX: Lock Health so they don't gain HP
+		local vHum = character:FindFirstChild("Humanoid")
+		local healthConn
+		if vHum then
+			local startHealth = vHum.Health
+			healthConn = vHum.HealthChanged:Connect(function(newHealth)
+				if character:GetAttribute("IsBeingCarried") and newHealth > startHealth then
+					vHum.Health = startHealth
+				end
+			end)
+		end
 		
 		-- Hide other prompts while being carried
 		prompt.Enabled = false
@@ -146,9 +165,17 @@ local function SetupCarryPrompt(character, verticalOffset)
 			if weld then weld:Destroy() end
 			if val then val:Destroy() end
 			if dropPrompt then dropPrompt:Destroy() end
+			if healthConn then healthConn:Disconnect() end
 			
 			character:SetAttribute("IsBeingCarried", false)
-			victimHrp.CanCollide = true
+			
+			-- Restore collision and mass
+			for _, part in ipairs(character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = true
+					part.Massless = false
+				end
+			end
 			
 			if victimHrp:FindFirstChild("CarryPrompt") then victimHrp.CarryPrompt.Enabled = true end
 			if victimHrp:FindFirstChild("FinishPrompt") then victimHrp.FinishPrompt.Enabled = true end
