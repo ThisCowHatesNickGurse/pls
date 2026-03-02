@@ -94,8 +94,9 @@ local function SetupCarryPrompt(character, verticalOffset)
 	prompt.ObjectText = character.Name
 	prompt.HoldDuration = 0.5
 	prompt.MaxActivationDistance = 8
-	prompt.UIOffset = Vector2.new(0, verticalOffset or 0) -- Use UIOffset for vertical spacing
+	prompt.UIOffset = Vector2.new(0, verticalOffset or 0) 
 	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow 
+	prompt.RequiresLineOfSight = false -- Ensure visibility from all angles
 	prompt.Parent = hrp
 	
 	prompt.Triggered:Connect(function(player)
@@ -897,8 +898,10 @@ local function setupHealthListener(character)
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
 			if hrp then
-				local prompt = hrp:FindFirstChild("FinishPrompt")
-				if prompt then prompt:Destroy() end
+				local fp = hrp:FindFirstChild("FinishPrompt")
+				if fp then fp:Destroy() end
+				local cp = hrp:FindFirstChild("CarryPrompt")
+				if cp then cp:Destroy() end
 			end
 		end
 
