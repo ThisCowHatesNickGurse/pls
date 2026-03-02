@@ -810,9 +810,6 @@ end
 --------------------------------------------------------------------
 -- PLAYER HEALTH & EVENT LISTENERS
 --------------------------------------------------------------------
-local ServerStorage = game:GetService("ServerStorage")
-local Players = game:GetService("Players")
--- Ensure your DesignedPrompt is in ServerStorage
 local designedPromptTemplate = ServerStorage:WaitForChild("DesignedPrompt")
 
 local function setupHealthListener(character)
