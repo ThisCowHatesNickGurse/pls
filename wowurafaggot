@@ -94,7 +94,7 @@ local function SetupCarryPrompt(character, verticalOffset)
 	prompt.ObjectText = character.Name
 	prompt.HoldDuration = 0.5
 	prompt.MaxActivationDistance = 8
-	prompt.VerticalOffset = verticalOffset or 0
+	prompt.UIOffset = Vector2.new(0, verticalOffset or 0) -- Use UIOffset for vertical spacing
 	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow 
 	prompt.Parent = hrp
 	
@@ -919,7 +919,7 @@ local function setupHealthListener(character)
 			prompt.ActionText = "Finish"
 			prompt.ObjectText = character.Name
 			prompt.HoldDuration = 0.5
-			prompt.VerticalOffset = 0 -- Keep finish prompt at base
+			prompt.UIOffset = Vector2.new(0, 0) -- Use UIOffset
 			prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 			prompt.RequiresLineOfSight = false
 			if hrp then prompt.Parent = hrp end
@@ -939,9 +939,9 @@ local function setupHealthListener(character)
 				end
 			end)
 
-			-- Add Carry Prompt when ragdolled (Above the finish prompt)
+			-- Add Carry Prompt when ragdolled (Above the finish prompt, UIOffset uses pixels)
 			task.spawn(function()
-				pcall(SetupCarryPrompt, character, 1.5)
+				pcall(SetupCarryPrompt, character, 60)
 			end)
 
 			task.spawn(function()
