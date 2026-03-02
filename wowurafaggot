@@ -93,15 +93,15 @@ end
 local function GiveSword(player)
 	if not isGameActive then return end
 	if not player or not player.Character then return end
-	
+
 	local char = player.Character
 	if char:GetAttribute("IsRagdolled") or char:GetAttribute("InFinisher") then return end
-	
+
 	local backpack = player:FindFirstChild("Backpack")
 	if not backpack then return end
-	
+
 	if char:FindFirstChild("Sword") or backpack:FindFirstChild("Sword") then return end
-	
+
 	local swordTemplate = ServerStorage:FindFirstChild("Sword") or ReplicatedStorage:FindFirstChild("Sword")
 	if swordTemplate and swordTemplate:IsA("Tool") then
 		local newSword = swordTemplate:Clone()
@@ -130,20 +130,20 @@ end
 
 local function getPlayerGender(player)
 	if not player then return "neutral" end
-	
+
 	-- 1. Check server-stored identity
 	local id = PlayerIdentity[player.UserId]
 	if id and id.Gender and id.Gender ~= "New" and id.Gender ~= "" then 
 		return genderCategory(id.Gender) 
 	end
-	
+
 	if player.Character then
 		-- 2. Check character attribute
 		local g = safeGetAttribute(player.Character, "Gender")
 		if g and g ~= "New" and g ~= "" then 
 			return genderCategory(g) 
 		end
-		
+
 		-- 3. Fallback: Parse the BillboardGui text
 		local head = player.Character:FindFirstChild("Head")
 		if head then
@@ -164,7 +164,7 @@ local function getPlayerGender(player)
 			end
 		end
 	end
-	
+
 	-- Default to neutral if all checks fail
 	return "neutral"
 end
@@ -548,48 +548,48 @@ local function CleanupFinisher(finisherId)
 	removeSpawnedMorphs(data)
 
 	if fChar then
-        local fHrp = fChar:FindFirstChild("HumanoidRootPart")
-        if fHrp then 
-            fHrp.Anchored = false 
-            if fHrp.Parent and fHrp.Parent:FindFirstChild("Humanoid") then
-                fHrp.Parent.Humanoid.AutoRotate = true
-            end
-        end
-        
-        fChar:SetAttribute("Invincible", false)
-        fChar:SetAttribute("InFinisher", false)
-        
-        if not fChar:GetAttribute("IsRagdolled") then
-            GiveSword(fPlayer)
-        end
-    end
+		local fHrp = fChar:FindFirstChild("HumanoidRootPart")
+		if fHrp then 
+			fHrp.Anchored = false 
+			if fHrp.Parent and fHrp.Parent:FindFirstChild("Humanoid") then
+				fHrp.Parent.Humanoid.AutoRotate = true
+			end
+		end
 
-    if vChar then
-        local vHrp = vChar:FindFirstChild("HumanoidRootPart")
-        if vHrp then 
-            vHrp.Anchored = false 
-            if vHrp.Parent and vHrp.Parent:FindFirstChild("Humanoid") then
-                vHrp.Parent.Humanoid.AutoRotate = true
-            end
-        end
-        
-        vChar:SetAttribute("Invincible", false)
-        vChar:SetAttribute("InFinisher", false)
+		fChar:SetAttribute("Invincible", false)
+		fChar:SetAttribute("InFinisher", false)
 
-        local vHum = vChar:FindFirstChild("Humanoid")
-        if vHum and vHum.Health > 0 and data.Finished then
-            vHum.Health = 0
-        end
+		if not fChar:GetAttribute("IsRagdolled") then
+			GiveSword(fPlayer)
+		end
+	end
 
-        if vHum and (vHum.Health <= 75 or data.Finished) then
-            Ragdoll.RagdollCharacter(vChar)
-        else
-            if vPlayer:IsA("Player") then GiveSword(vPlayer) end
-        end
-    end
+	if vChar then
+		local vHrp = vChar:FindFirstChild("HumanoidRootPart")
+		if vHrp then 
+			vHrp.Anchored = false 
+			if vHrp.Parent and vHrp.Parent:FindFirstChild("Humanoid") then
+				vHrp.Parent.Humanoid.AutoRotate = true
+			end
+		end
 
-    -- The crash is bypassed, allowing the table to finally clear!
-    ActiveFinishers[finisherId] = nil
+		vChar:SetAttribute("Invincible", false)
+		vChar:SetAttribute("InFinisher", false)
+
+		local vHum = vChar:FindFirstChild("Humanoid")
+		if vHum and vHum.Health > 0 and data.Finished then
+			vHum.Health = 0
+		end
+
+		if vHum and (vHum.Health <= 75 or data.Finished) then
+			Ragdoll.RagdollCharacter(vChar)
+		else
+			if vPlayer:IsA("Player") then GiveSword(vPlayer) end
+		end
+	end
+
+	-- The crash is bypassed, allowing the table to finally clear!
+	ActiveFinishers[finisherId] = nil
 end
 
 local function StartFinisherSequence(finisherPlayer, victimPlayer)
@@ -629,14 +629,14 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	-- TRIGGER LOADING SCREEN & WAIT
 	-- ==========================================
 	local loadingDuration = 2.5 -- Seconds the black screen lasts
-	
+
 	if finisherPlayer then
 		FinisherLoadingEvent:FireClient(finisherPlayer, loadingDuration)
 	end
 	if victimPlayer:IsA("Player") then
 		FinisherLoadingEvent:FireClient(victimPlayer, loadingDuration)
 	end
-	
+
 	-- Anchor immediately so they don't move while the screen is blacking out
 	fHrp.Anchored = true
 	vHrp.Anchored = true
@@ -668,22 +668,18 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	local fRole = ""
 	local vRole = ""
 
-	if fGender == "female" and vGender == "femboy" then
-   		-- Special case: Girl finishes Femboy
-  	  fRole = "Serious"
- 	   vRole = "Standard"
-	elseif fGender == "female" or fGender == "femboy" then
- 	   -- Original logic: Girl/Femboy finishing anyone else
- 	   fRole = "Serious"
-	    vRole = "Standard"
+	if fGender == "female" or fGender == "femboy" then
+		-- Girl/Femboy finishing anyone
+		fRole = "Serious"
+		vRole = "Standard"
 	elseif fGender == "male" then
-	    -- Male finishing anyone
-	    fRole = "Standard"
-	    vRole = "Serious"
+		-- Male finishing anyone
+		fRole = "Standard"
+		vRole = "Serious"
 	else
-	    -- Fallback
-	    fRole = "Serious"
-	    vRole = "Standard"
+		-- Fallback/Neutral case: just ensure they aren't the same
+		fRole = "Serious"
+		vRole = "Standard"
 	end
 	if fRole == vRole then
 		if fRole == "Standard" then vRole = "Serious" else vRole = "Standard" end
@@ -733,14 +729,14 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	-- ==========================================
 	task.spawn(function()
 		local t = 0
-	-- Loop now ends at 45 seconds instead of 100
+		-- Loop now ends at 45 seconds instead of 100
 		while ActiveFinishers[finisherPlayer.UserId] == data and t <= 45 do
 			task.wait(1)
 			t += 1
 
 			if t == 9 then -- 20% of 45 (originally 20)
 				changeSpeedForChar(fChar, 1.2)
-			changeSpeedForChar(vChar, 1.2)
+				changeSpeedForChar(vChar, 1.2)
 			elseif t == 18 then -- 40% of 45 (originally 40)
 				changeSpeedForChar(fChar, 2.0)
 				changeSpeedForChar(vChar, 2.0)
@@ -779,7 +775,7 @@ local Maps = {
 	["Icebound"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/cc"
 }
 
-local GAME_TIME = 630
+local GAME_TIME = 615
 local VOTE_TIME = 15
 
 local votes = {}
@@ -810,21 +806,6 @@ end
 --------------------------------------------------------------------
 -- PLAYER HEALTH & EVENT LISTENERS
 --------------------------------------------------------------------
-
--- Helper function to generate custom-styled prompts on the fly
-local function createCustomPrompt(name, actionText, objectText, keycode, offset)
-	local prompt = Instance.new("ProximityPrompt")
-	prompt.Name = name
-	prompt.ActionText = actionText
-	prompt.ObjectText = objectText
-	prompt.KeyboardKeyCode = keycode
-	prompt.UIOffset = offset
-	prompt.Style = Enum.ProximityPromptStyle.Custom -- Applies custom style
-	prompt.RequiresLineOfSight = false
-	prompt.MaxActivationDistance = 8
-	return prompt
-end
-
 local function setupHealthListener(character)
 	local humanoid = character:WaitForChild("Humanoid")
 	local currentHP = humanoid.Health
@@ -849,8 +830,6 @@ local function setupHealthListener(character)
 		if hp >= 100 and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") then
 			character:SetAttribute("IsRagdolled", false)
 			character:SetAttribute("Invincible", false)
-			character:SetAttribute("IsCarried", false) -- Clear carry state
-			character:SetAttribute("CarrierUserId", nil) -- Clear carrier lock
 
 			humanoid.PlatformStand = false
 			humanoid.WalkSpeed = 16 
@@ -860,11 +839,8 @@ local function setupHealthListener(character)
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
 			if hrp then
-				-- Cleanup prompts and welds
-				if hrp:FindFirstChild("FinishPrompt") then hrp.FinishPrompt:Destroy() end
-				if hrp:FindFirstChild("ExecutePrompt") then hrp.ExecutePrompt:Destroy() end
-				if hrp:FindFirstChild("CarryPrompt") then hrp.CarryPrompt:Destroy() end
-				if hrp:FindFirstChild("CarryWeld") then hrp.CarryWeld:Destroy() end
+				local prompt = hrp:FindFirstChild("FinishPrompt")
+				if prompt then prompt:Destroy() end
 			end
 		end
 
@@ -880,123 +856,24 @@ local function setupHealthListener(character)
 			RemoveSword(ownerPlayer) 
 
 			local hrp = character:FindFirstChild("HumanoidRootPart")
-			
-			if hrp then
-				-- 1. FINISH PROMPT
-				local finishPrompt = createCustomPrompt("FinishPrompt", "Finish", character.Name, Enum.KeyCode.F, Vector2.new(60, 0))
-				finishPrompt.Parent = hrp
+			local prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "FinishPrompt"
+			prompt.ActionText = "Finish"
+			prompt.ObjectText = character.Name
+			prompt.HoldDuration = 0.5
+			prompt.RequiresLineOfSight = false
+			if hrp then prompt.Parent = hrp end
 
-				-- 2. EXECUTE / GLORY PROMPT
-				local executePrompt = createCustomPrompt("ExecutePrompt", "Execute", character.Name, Enum.KeyCode.X, Vector2.new(-60, 0))
-				executePrompt.Parent = hrp
+			prompt.Triggered:Connect(function(finisherPlayer)
+				local fChar = finisherPlayer.Character
+				if fChar and fChar:GetAttribute("IsRagdolled") then return end
 
-				-- 3. CARRY PROMPT
-				local carryPrompt = createCustomPrompt("CarryPrompt", "Carry", character.Name, Enum.KeyCode.C, Vector2.new(0, -60))
-				carryPrompt.Parent = hrp
-
-				-- PROMPT CONNECTIONS --
-
-				-- Finish Logic
-				finishPrompt.Triggered:Connect(function(finisherPlayer)
-					local fChar = finisherPlayer.Character
-					if fChar and fChar:GetAttribute("IsRagdolled") then return end
-
-					if fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.Health > 0 then
-						finishPrompt:Destroy()
-						executePrompt:Destroy()
-						carryPrompt:Destroy()
-						local target = ownerPlayer or character
-						StartFinisherSequence(finisherPlayer, target)
-					end
-				end)
-
-				-- Execute Logic
-				executePrompt.Triggered:Connect(function(executorPlayer)
-					local eChar = executorPlayer.Character
-					if eChar and eChar:GetAttribute("IsRagdolled") then return end
-
-					if eChar and eChar:FindFirstChild("Humanoid") and eChar.Humanoid.Health > 0 then
-						-- Give leaderstats kill
-						local leaderstats = executorPlayer:FindFirstChild("leaderstats")
-						if leaderstats and leaderstats:FindFirstChild("Kills") then
-							leaderstats.Kills.Value += 1
-						end
-						
-						-- Kill the target
-						character:SetAttribute("Invincible", false)
-						humanoid.Health = 0
-						
-						finishPrompt:Destroy()
-						executePrompt:Destroy()
-						carryPrompt:Destroy()
-					end
-				end)
-
-				-- Carry / Drop Logic
-				carryPrompt.Triggered:Connect(function(carrierPlayer)
-					local cChar = carrierPlayer.Character
-					if cChar and cChar:GetAttribute("IsRagdolled") then return end
-					
-					local carrierHrp = cChar:FindFirstChild("HumanoidRootPart")
-					if not carrierHrp then return end
-
-					local isCarried = character:GetAttribute("IsCarried")
-					local currentCarrierId = character:GetAttribute("CarrierUserId")
-					
-					if not isCarried then
-						-- START CARRYING
-						character:SetAttribute("IsCarried", true)
-						character:SetAttribute("CarrierUserId", carrierPlayer.UserId) -- Lock to this player
-						
-						finishPrompt.Enabled = false
-						executePrompt.Enabled = false
-						
-						carryPrompt.ActionText = "Drop"
-						carryPrompt.KeyboardKeyCode = Enum.KeyCode.Q -- Changes keybind to Q to drop
-						
-						-- Weld the body to the carrier
-						local weld = Instance.new("Weld")
-						weld.Name = "CarryWeld"
-						weld.Part0 = carrierHrp
-						weld.Part1 = hrp
-						-- Offset to carry on the back/shoulder
-						weld.C0 = CFrame.new(0, 1, 1) * CFrame.Angles(math.rad(-90), 0, 0) 
-						weld.Parent = hrp
-						
-						-- Make the target massless so they don't weigh down the carrier
-						for _, part in ipairs(character:GetDescendants()) do
-							if part:IsA("BasePart") then
-								part.Massless = true
-								part.CanCollide = false
-							end
-						end
-					else
-						-- DROP
-						-- Prevent anyone else from dropping the body
-						if currentCarrierId ~= carrierPlayer.UserId then return end
-
-						character:SetAttribute("IsCarried", false)
-						character:SetAttribute("CarrierUserId", nil) -- Unlock
-						
-						finishPrompt.Enabled = true
-						executePrompt.Enabled = true
-						
-						carryPrompt.ActionText = "Carry"
-						carryPrompt.KeyboardKeyCode = Enum.KeyCode.C -- Changes back to C
-						
-						if hrp:FindFirstChild("CarryWeld") then
-							hrp.CarryWeld:Destroy()
-						end
-						
-						-- Restore Mass properties
-						for _, part in ipairs(character:GetDescendants()) do
-							if part:IsA("BasePart") then
-								part.Massless = false
-							end
-						end
-					end
-				end)
-			end
+				if fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.Health > 0 then
+					prompt:Destroy()
+					local target = ownerPlayer or character
+					StartFinisherSequence(finisherPlayer, target)
+				end
+			end)
 
 			task.spawn(function()
 				while character and character.Parent and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") do
@@ -1009,6 +886,7 @@ local function setupHealthListener(character)
 		end
 	end)
 end
+
 local function setupPlayer(player)
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"
@@ -1049,7 +927,7 @@ local function setupPlayer(player)
 			end
 		end
 	end)
-	
+
 	if player.Character and player.Character.Parent then
 		task.spawn(function()
 			pcall(function() player.Character:WaitForChild("Humanoid",10); player.Character:WaitForChild("Head",10) end)
@@ -1234,7 +1112,7 @@ task.spawn(function()
 
 		if activeMapModel and activeMapModel:FindFirstChild("Spawns") then
 			teleportPlayersTo(activeMapModel.Spawns, Players:GetPlayers())
-			
+
 			for _, p in ipairs(Players:GetPlayers()) do
 				GiveSword(p)
 			end
@@ -1248,7 +1126,7 @@ task.spawn(function()
 		end
 
 		isGameActive = false
-		
+
 		if activeMapModel then
 			activeMapModel:Destroy()
 			activeMapModel = nil
@@ -1260,7 +1138,7 @@ task.spawn(function()
 
 		local lobbySpawns = workspace:FindFirstChild("Lobby") and workspace.Lobby:FindFirstChild("Spawns")
 		teleportPlayersTo(lobbySpawns, Players:GetPlayers())
-		
+
 		for _, p in ipairs(Players:GetPlayers()) do
 			RemoveSword(p)
 		end
