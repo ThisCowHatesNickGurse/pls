@@ -26,7 +26,7 @@ while true do
 	local success, response = pcall(function() return HttpService:GetAsync(checkUrl) end)
 	if success and response and response ~= "" and not string.find(response, "404") then
 		warn("[SERVER] Activation confirmed. Waiting 60s...")
-		task.wait(60) 
+		task.wait(1) 
 		break
 	else
 		task.wait(10)
