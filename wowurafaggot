@@ -14,7 +14,6 @@ if not FinisherLoadingEvent then
 end
 
 Players.CharacterAutoLoads = false -- FORCE DISABLE AUTO SPAWN AT TOP
-game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, true) -- Ensure UI is visible
 --------------------------------------------------------------------
 -- MODULE REQUIREMENTS
 --------------------------------------------------------------------
