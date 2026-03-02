@@ -810,7 +810,20 @@ end
 --------------------------------------------------------------------
 -- PLAYER HEALTH & EVENT LISTENERS
 --------------------------------------------------------------------
-local designedPromptTemplate = ServerStorage:WaitForChild("DesignedPrompt")
+
+-- Helper function to generate custom-styled prompts on the fly
+local function createCustomPrompt(name, actionText, objectText, keycode, offset)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = name
+	prompt.ActionText = actionText
+	prompt.ObjectText = objectText
+	prompt.KeyboardKeyCode = keycode
+	prompt.UIOffset = offset
+	prompt.Style = Enum.ProximityPromptStyle.Custom -- Applies custom style
+	prompt.RequiresLineOfSight = false
+	prompt.MaxActivationDistance = 8
+	return prompt
+end
 
 local function setupHealthListener(character)
 	local humanoid = character:WaitForChild("Humanoid")
@@ -837,6 +850,7 @@ local function setupHealthListener(character)
 			character:SetAttribute("IsRagdolled", false)
 			character:SetAttribute("Invincible", false)
 			character:SetAttribute("IsCarried", false) -- Clear carry state
+			character:SetAttribute("CarrierUserId", nil) -- Clear carrier lock
 
 			humanoid.PlatformStand = false
 			humanoid.WalkSpeed = 16 
@@ -869,30 +883,15 @@ local function setupHealthListener(character)
 			
 			if hrp then
 				-- 1. FINISH PROMPT
-				local finishPrompt = designedPromptTemplate:Clone()
-				finishPrompt.Name = "FinishPrompt"
-				finishPrompt.ActionText = "Finish"
-				finishPrompt.ObjectText = character.Name
-				finishPrompt.KeyboardKeyCode = Enum.KeyCode.F
-				finishPrompt.UIOffset = Vector2.new(60, 0) -- Right side
+				local finishPrompt = createCustomPrompt("FinishPrompt", "Finish", character.Name, Enum.KeyCode.F, Vector2.new(60, 0))
 				finishPrompt.Parent = hrp
 
 				-- 2. EXECUTE / GLORY PROMPT
-				local executePrompt = designedPromptTemplate:Clone()
-				executePrompt.Name = "ExecutePrompt"
-				executePrompt.ActionText = "Execute"
-				executePrompt.ObjectText = character.Name
-				executePrompt.KeyboardKeyCode = Enum.KeyCode.X
-				executePrompt.UIOffset = Vector2.new(-60, 0) -- Left side
+				local executePrompt = createCustomPrompt("ExecutePrompt", "Execute", character.Name, Enum.KeyCode.X, Vector2.new(-60, 0))
 				executePrompt.Parent = hrp
 
 				-- 3. CARRY PROMPT
-				local carryPrompt = designedPromptTemplate:Clone()
-				carryPrompt.Name = "CarryPrompt"
-				carryPrompt.ActionText = "Carry"
-				carryPrompt.ObjectText = character.Name
-				carryPrompt.KeyboardKeyCode = Enum.KeyCode.C
-				carryPrompt.UIOffset = Vector2.new(0, -60) -- Top/Above the others
+				local carryPrompt = createCustomPrompt("CarryPrompt", "Carry", character.Name, Enum.KeyCode.C, Vector2.new(0, -60))
 				carryPrompt.Parent = hrp
 
 				-- PROMPT CONNECTIONS --
@@ -942,10 +941,13 @@ local function setupHealthListener(character)
 					if not carrierHrp then return end
 
 					local isCarried = character:GetAttribute("IsCarried")
+					local currentCarrierId = character:GetAttribute("CarrierUserId")
 					
 					if not isCarried then
 						-- START CARRYING
 						character:SetAttribute("IsCarried", true)
+						character:SetAttribute("CarrierUserId", carrierPlayer.UserId) -- Lock to this player
+						
 						finishPrompt.Enabled = false
 						executePrompt.Enabled = false
 						
@@ -957,7 +959,7 @@ local function setupHealthListener(character)
 						weld.Name = "CarryWeld"
 						weld.Part0 = carrierHrp
 						weld.Part1 = hrp
-						-- Offset to carry on the back/shoulder (adjust Y and Z to your liking)
+						-- Offset to carry on the back/shoulder
 						weld.C0 = CFrame.new(0, 1, 1) * CFrame.Angles(math.rad(-90), 0, 0) 
 						weld.Parent = hrp
 						
@@ -970,7 +972,12 @@ local function setupHealthListener(character)
 						end
 					else
 						-- DROP
+						-- Prevent anyone else from dropping the body
+						if currentCarrierId ~= carrierPlayer.UserId then return end
+
 						character:SetAttribute("IsCarried", false)
+						character:SetAttribute("CarrierUserId", nil) -- Unlock
+						
 						finishPrompt.Enabled = true
 						executePrompt.Enabled = true
 						
