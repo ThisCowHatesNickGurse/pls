@@ -779,7 +779,7 @@ local Maps = {
 	["Icebound"] = "https://raw.githubusercontent.com/ThisCowHatesNickGurse/pls/refs/heads/main/cc"
 }
 
-local GAME_TIME = 30
+local GAME_TIME = 630
 local VOTE_TIME = 15
 
 local votes = {}
