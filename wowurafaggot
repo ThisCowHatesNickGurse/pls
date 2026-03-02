@@ -1003,6 +1003,61 @@ CastVoteEvent.OnServerEvent:Connect(function(player, mapName)
 end)
 
 --------------------------------------------------------------------
+-- LIGHTING SYSTEM SETUP
+--------------------------------------------------------------------
+local ServerStorage = game:GetService("ServerStorage")
+local LightingService = game:GetService("Lighting")
+local lightingFolders = ServerStorage:WaitForChild("Lighting")
+
+-- Cache the default Lobby lighting so we can restore it later
+local lobbyLightingCache = {}
+for _, child in ipairs(LightingService:GetChildren()) do
+	-- Save anything that is a lighting effect or skybox
+	if child:IsA("Sky") or child:IsA("Atmosphere") or child:IsA("PostEffect") then
+		table.insert(lobbyLightingCache, child:Clone())
+	end
+end
+
+local function applyMapLighting(mapName)
+	-- 1. Clear out current lighting effects
+	for _, child in ipairs(LightingService:GetChildren()) do
+		if child:IsA("Sky") or child:IsA("Atmosphere") or child:IsA("PostEffect") then
+			child:Destroy()
+		end
+	end
+
+	-- 2. Apply new lighting
+	if mapName == "Lobby" then
+		-- Restore lobby lighting from the cache
+		for _, obj in ipairs(lobbyLightingCache) do
+			obj:Clone().Parent = LightingService
+		end
+	else
+		-- Apply specific map lighting from ServerStorage
+		local mapFolder = lightingFolders:FindFirstChild(mapName)
+		if mapFolder then
+			for _, obj in ipairs(mapFolder:GetChildren()) do
+				obj:Clone().Parent = LightingService
+			end
+		else
+			warn("No lighting folder found for map: " .. tostring(mapName))
+			-- Fallback to lobby lighting if the map folder is missing
+			for _, obj in ipairs(lobbyLightingCache) do
+				obj:Clone().Parent = LightingService
+			end
+		end
+	end
+end
+--------------------------------------------------------------------
+-- FINISHER CLEANUP HELPERS
+--------------------------------------------------------------------
+local function StopAllFinishers()
+	for userId, finisherData in pairs(ActiveFinishers) do
+		-- This triggers your existing cleanup function for every active finisher
+		CleanupFinisher(userId)
+	end
+end
+--------------------------------------------------------------------
 -- MAIN MAP ROUND LOOP
 --------------------------------------------------------------------
 task.spawn(function()
@@ -1049,6 +1104,9 @@ task.spawn(function()
 		local dataUrl = Maps[winningMapName]
 		activeMapModel = Serializer.Map.LoadFromURL(dataUrl, workspace)
 
+		-- Apply Map Lighting
+		applyMapLighting(winningMapName)
+
 		isGameActive = true
 
 		if activeMapModel and activeMapModel:FindFirstChild("Spawns") then
@@ -1072,6 +1130,10 @@ task.spawn(function()
 			activeMapModel:Destroy()
 			activeMapModel = nil
 		end
+
+		StopAllFinishers()
+		-- Restore Lobby Lighting
+		applyMapLighting("Lobby")
 
 		local lobbySpawns = workspace:FindFirstChild("Lobby") and workspace.Lobby:FindFirstChild("Spawns")
 		teleportPlayersTo(lobbySpawns, Players:GetPlayers())
