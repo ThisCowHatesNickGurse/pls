@@ -241,7 +241,7 @@ end
 
 local function weldMorphPiece(Character, MorphModel, morphPieceName, c0, c1)
 	if not Character or not MorphModel then return end
-	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso") or Character:FindFirstChild("HumanoidRootPart")
+	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("HumanoidRootPart")
 	if not torso then return end
 	local MorphPiece = MorphModel:FindFirstChild(morphPieceName)
 	if MorphPiece then
@@ -255,7 +255,7 @@ end
 
 local function weldStaticPiece(Character, MorphModel, morphPieceName)
 	if not Character or not MorphModel then return end
-	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso") or Character:FindFirstChild("HumanoidRootPart")
+	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("HumanoidRootPart")
 	if not torso then return end
 	local MorphPiece = MorphModel:FindFirstChild(morphPieceName)
 	if MorphPiece then
@@ -268,7 +268,7 @@ end
 
 local function CorrectColors(targ, character)
 	if not character or not targ then return end
-	local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+	local torso = character:FindFirstChild("Torso")
 	if not torso then return end
 
 	local targetColor = torso.Color
@@ -362,7 +362,7 @@ local function RemoveMorph(Morph, Character)
 		if f then f:Destroy() end
 	end
 
-	local torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso")
+	local torso = Character:FindFirstChild("Torso")
 	if not torso then return end
 
 	for _, part in pairs(Morph:GetChildren()) do
@@ -928,7 +928,7 @@ local function setupHealthListener(character)
 			Ragdoll.UnRagdollCharacter(character)
 			GiveSword(ownerPlayer) 
 
-			local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+			local torso = character:FindFirstChild("Torso")
 			if torso and torso:FindFirstChild("CarryClickDetector") then
 				torso.CarryClickDetector:Destroy()
 			end
@@ -963,7 +963,7 @@ local function setupHealthListener(character)
 			RemoveSword(ownerPlayer) 
 
 			-- Add ClickDetector to Torso for Double Click Carrying
-			local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+			local torso = character:FindFirstChild("Torso")
 			if torso then
 				local cd = Instance.new("ClickDetector")
 				cd.Name = "CarryClickDetector"
