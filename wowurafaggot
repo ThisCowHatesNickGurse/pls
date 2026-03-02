@@ -12,6 +12,9 @@ if not FinisherLoadingEvent then
 	FinisherLoadingEvent.Name = "FinisherLoadingEvent"
 	FinisherLoadingEvent.Parent = ReplicatedStorage
 end
+
+Players.CharacterAutoLoads = false -- FORCE DISABLE AUTO SPAWN AT TOP
+game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.All, true) -- Ensure UI is visible
 --------------------------------------------------------------------
 -- MODULE REQUIREMENTS
 --------------------------------------------------------------------
@@ -64,7 +67,7 @@ local TimerUpdateEvent = getOrCreateRemote("RemoteEvent", "TimerUpdateEvent", Re
 --------------------------------------------------------------------
 -- GLOBAL GAME STATE & CONFIG
 --------------------------------------------------------------------
-Players.CharacterAutoLoads = false -- Disable auto-spawning for manual menu control
+Players.CharacterAutoLoads = false -- Reinforce manual spawn
 
 local isGameActive = false
 local isVoting = false
@@ -81,15 +84,18 @@ local SpawnRemote = getOrCreateRemote("RemoteEvent", "SpawnRemote", ReplicatedSt
 --------------------------------------------------------------------
 -- CARRY SYSTEM
 --------------------------------------------------------------------
-local function SetupCarryPrompt(character)
-	local hrp = character:WaitForChild("HumanoidRootPart", 5) -- Add timeout to prevent infinite yield
+local function SetupCarryPrompt(character, verticalOffset)
+	local hrp = character:WaitForChild("HumanoidRootPart", 5) 
 	if not hrp then return end
 	
 	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "CarryPrompt"
 	prompt.ActionText = "Carry"
 	prompt.ObjectText = character.Name
 	prompt.HoldDuration = 0.5
 	prompt.MaxActivationDistance = 8
+	prompt.VerticalOffset = verticalOffset or 0
+	prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow 
 	prompt.Parent = hrp
 	
 	prompt.Triggered:Connect(function(player)
@@ -575,22 +581,13 @@ end
 --------------------------------------------------------------------
 local function getRandomAnimName()
 	local categories = animsFolder:GetChildren()
-	if #categories == 0 then 
-		return nil 
-	end
-
+	if #categories == 0 then return nil end
 	local randomCat = categories[math.random(1, #categories)]
 	if randomCat:IsA("Folder") then
 		local anims = randomCat:GetChildren()
-		if #anims == 0 then 
-			return nil 
-		end
-
-		local chosenName = anims[math.random(1, #anims)].Name
-		print("Selected animation:", chosenName) -- print it
-		return chosenName
+		if #anims == 0 then return nil end
+		return anims[math.random(1, #anims)].Name
 	end
-
 	return nil
 end
 
@@ -922,6 +919,8 @@ local function setupHealthListener(character)
 			prompt.ActionText = "Finish"
 			prompt.ObjectText = character.Name
 			prompt.HoldDuration = 0.5
+			prompt.VerticalOffset = 0 -- Keep finish prompt at base
+			prompt.Exclusivity = Enum.ProximityPromptExclusivity.AlwaysShow
 			prompt.RequiresLineOfSight = false
 			if hrp then prompt.Parent = hrp end
 
@@ -931,14 +930,18 @@ local function setupHealthListener(character)
 
 				if fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.Health > 0 then
 					prompt:Destroy()
+					-- Ensure we cleanup the carry prompt too if they are finished
+					local cp = character.HumanoidRootPart:FindFirstChild("CarryPrompt")
+					if cp then cp:Destroy() end
+					
 					local target = ownerPlayer or character
 					StartFinisherSequence(finisherPlayer, target)
 				end
 			end)
 
-			-- Add Carry Prompt when ragdolled
+			-- Add Carry Prompt when ragdolled (Above the finish prompt)
 			task.spawn(function()
-				pcall(SetupCarryPrompt, character)
+				pcall(SetupCarryPrompt, character, 1.5)
 			end)
 
 			task.spawn(function()
