@@ -62,8 +62,10 @@ local UpdateVotesEvent = getOrCreateRemote("RemoteEvent", "UpdateVotesEvent", Re
 local TimerUpdateEvent = getOrCreateRemote("RemoteEvent", "TimerUpdateEvent", ReplicatedStorage)
 
 --------------------------------------------------------------------
--- GLOBAL GAME STATE
+-- GLOBAL GAME STATE & CONFIG
 --------------------------------------------------------------------
+Players.CharacterAutoLoads = false -- Disable auto-spawning for manual menu control
+
 local isGameActive = false
 local isVoting = false
 local voteTimeLeft = 0
@@ -72,6 +74,59 @@ local activeMapModel = nil
 local PlayerIdentity = {}     
 local ActiveFinishers = {}
 local PlayerDummies = {} 
+
+local CarryRemote = getOrCreateRemote("RemoteEvent", "CarryRemote", ReplicatedStorage)
+local SpawnRemote = getOrCreateRemote("RemoteEvent", "SpawnRemote", ReplicatedStorage)
+
+--------------------------------------------------------------------
+-- CARRY SYSTEM
+--------------------------------------------------------------------
+local function SetupCarryPrompt(character)
+	local hrp = character:WaitForChild("HumanoidRootPart")
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Carry"
+	prompt.ObjectText = character.Name
+	prompt.HoldDuration = 0.5
+	prompt.MaxActivationDistance = 8
+	prompt.Parent = hrp
+	
+	prompt.Triggered:Connect(function(player)
+		local carrierChar = player.Character
+		if not carrierChar or carrierChar == character then return end
+		
+		-- Check if already carrying
+		if carrierChar:FindFirstChild("Carrying") then return end
+		
+		local victimHrp = character:FindFirstChild("HumanoidRootPart")
+		local carrierHrp = carrierChar:FindFirstChild("HumanoidRootPart")
+		if not victimHrp or not carrierHrp then return end
+		
+		-- Logic to weld victim to carrier
+		local weld = Instance.new("Weld")
+		weld.Name = "CarryWeld"
+		weld.Part0 = carrierHrp
+		weld.Part1 = victimHrp
+		weld.C0 = CFrame.new(0, 2, -1.5) * CFrame.Angles(math.rad(90), 0, 0)
+		weld.Parent = victimHrp
+		
+		local val = Instance.new("ObjectValue")
+		val.Name = "Carrying"
+		val.Value = character
+		val.Parent = carrierChar
+		
+		prompt.Enabled = false
+		
+		-- Stop carrying on jump/drop
+		local hum = carrierChar:FindFirstChild("Humanoid")
+		local conn
+		conn = hum.Jumping:Connect(function()
+			weld:Destroy()
+			val:Destroy()
+			prompt.Enabled = true
+			conn:Disconnect()
+		end)
+	end)
+end
 
 --------------------------------------------------------------------
 -- SWORD MANAGEMENT SYSTEM
@@ -870,6 +925,11 @@ local function setupHealthListener(character)
 				end
 			end)
 
+			-- Add Carry Prompt when ragdolled
+			task.spawn(function()
+				pcall(SetupCarryPrompt, character)
+			end)
+
 			task.spawn(function()
 				while character and character.Parent and character:GetAttribute("IsRagdolled") and not character:GetAttribute("InFinisher") do
 					task.wait(1.5)
@@ -902,7 +962,15 @@ local function setupPlayer(player)
 		local hum = c:WaitForChild("Humanoid", 10)
 		local hrp = c:WaitForChild("HumanoidRootPart", 10)
 		local head = c:WaitForChild("Head", 10)
-		if not hrp then return end 
+		if not hrp or not hum then return end 
+
+		-- Immediate cleanup on death to prevent ragdoll bodies
+		hum.Died:Connect(function()
+			task.wait(0.1) -- Tiny delay to ensure death state registers
+			if c and c.Parent then
+				c:Destroy()
+			end
+		end)
 
 		-- FIX: Retrieve the saved identity from the table and apply it as attributes
 		local id2 = PlayerIdentity[player.UserId]
@@ -926,10 +994,11 @@ local function setupPlayer(player)
 		else
 			RemoveSword(player) 
 			local lobby = workspace:FindFirstChild("Lobby")
-			if not lobby then return end
-			local lobbySpawns = lobby:FindFirstChild("Spawns")
-			if lobbySpawns then
-				teleportPlayersTo(lobbySpawns, {player})
+			if lobby then
+				local lobbySpawns = lobby:FindFirstChild("Spawns")
+				if lobbySpawns then
+					teleportPlayersTo(lobbySpawns, {player})
+				end
 			end
 		end
 	end)
@@ -1008,6 +1077,10 @@ TaskEvent.OnServerEvent:Connect(function(player, action, arg1, arg2)
 		
 		print(string.format("[Identity] Saved %s: %s, %s", player.Name, arg1, arg2))
 	end
+end)
+
+SpawnRemote.OnServerEvent:Connect(function(player)
+	player:LoadCharacter()
 end)
 
 morphEvent.OnServerEvent:Connect(function(player, action, arg1)
