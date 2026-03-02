@@ -729,26 +729,27 @@ local function StartFinisherSequence(finisherPlayer, victimPlayer)
 	-- ==========================================
 	task.spawn(function()
 		local t = 0
-		while ActiveFinishers[finisherPlayer.UserId] == data and t <= 100 do
+	-- Loop now ends at 45 seconds instead of 100
+		while ActiveFinishers[finisherPlayer.UserId] == data and t <= 45 do
 			task.wait(1)
 			t += 1
 
-			if t == 20 then
+			if t == 9 then -- 20% of 45 (originally 20)
 				changeSpeedForChar(fChar, 1.2)
-				changeSpeedForChar(vChar, 1.2)
-			elseif t == 40 then
+			changeSpeedForChar(vChar, 1.2)
+			elseif t == 18 then -- 40% of 45 (originally 40)
 				changeSpeedForChar(fChar, 2.0)
 				changeSpeedForChar(vChar, 2.0)
-			elseif t == 60 then
+			elseif t == 27 then -- 60% of 45 (originally 60)
 				changeSpeedForChar(fChar, 2.0)
 				changeSpeedForChar(vChar, 2.0)
-			elseif t == 75 then
+			elseif t == 34 then -- ~75% of 45 (originally 75)
 				changeSpeedForChar(fChar, 3.0)
 				changeSpeedForChar(vChar, 3.0)
-			elseif t == 85 then
+			elseif t == 38 then -- ~85% of 45 (originally 85)
 				changeSpeedForChar(fChar, 0.25)
 				changeSpeedForChar(vChar, 0.25)
-			elseif t == 95 then
+			elseif t == 43 then -- ~95% of 45 (originally 95)
 				data.Finished = true
 				if finisherPlayer:FindFirstChild("leaderstats") and finisherPlayer.leaderstats:FindFirstChild("Kills") then
 					finisherPlayer.leaderstats.Kills.Value += 1
