@@ -77,7 +77,7 @@
             display: block;
             position: fixed;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(10, 0, 0, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background: linear-gradient(rgba(10, 0, 0, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.02));
             z-index: 2;
             background-size: 100% 3px, 3px 100%;
             pointer-events: none;
@@ -212,56 +212,6 @@
             transform: perspective(1000px) rotateX(0) rotateY(0);
         }
 
-        /* Link card */
-        .link-card {
-            background-color: rgba(5, 5, 5, 0.5);
-            border: 1px solid rgba(50, 50, 50, 0.5);
-            border-left: 3px solid #630909; /* Dirty gold */
-            transition: all 0.3s ease-in-out;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(2px);
-        }
-        
-        .link-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%;
-            width: 50%; height: 100%;
-            background: linear-gradient(to right, transparent, rgba(81,0,0, 0.1), transparent);
-            transform: skewX(-20deg);
-            transition: 0.5s;
-        }
-
-        .link-card:hover::before { left: 150%; }
-
-        .link-card:hover {
-            background-color: rgba(20, 20, 20, 0.7);
-            transform: translateX(4px); 
-            border-color: #66552b;
-            border-left: 3px solid #630909;
-            box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.8);
-        }
-
-        .btn-cta {
-            background-color: transparent;
-            color: #630909 !important;
-            border: 1px solid #630909;
-            transition: all 0.2s linear;
-            text-transform: uppercase;
-            font-family: 'Share Tech Mono', monospace;
-            letter-spacing: 2px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-cta:hover {
-            background-color: rgba(81,0,0, 0.2);
-            color: #fff !important;
-            border-color: #630909;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 0 15px rgba(81,0,0, 0.3);
-        }
-
         .status-dot { box-shadow: 0 0 10px currentColor; }
         
         #profile-picture {
@@ -321,34 +271,8 @@
 
             <div class="h-[1px] w-32 mx-auto mb-8 bg-gradient-to-r from-transparent via-[#630909] to-transparent shadow-[0_0_8px_rgba(81,0,0,0.5)]"></div>
             
-            <section class="mb-10 text-center">
+            <section class="text-center">
                 <p class="text-gray-300 text-xs font-['Share_Tech_Mono'] tracking-widest uppercase whitespace-pre-wrap">"Wagwan."</p>
-            </section>
-            
-            <section class="select-none space-y-4">
-                <a class="flex items-center flex-col justify-between link-card p-4 sm:flex-row group" href="#" id="discord-server-link" target="_blank">
-                    <div class="flex items-center w-full" id="server-info">
-                        <div class="h-12 w-12 mr-4 bg-black border border-[#630909] overflow-hidden flex-shrink-0 flex items-center justify-center">
-                            <img alt="Server Icon" src="https://placehold.co/64x64/000000/b89947?text=DC&font=monospace" class="h-full w-full object-cover" id="server-icon" onerror='this.onerror=null,this.src="https://placehold.co/64x64/000000/b89947?text=DC"'>
-                        </div>
-                        <div>
-                            <span class="font-bold text-gray-200 font-['Share_Tech_Mono'] text-sm tracking-widest" id="server-name">CONNECTING...</span>
-                            <div class="flex mt-1.5 space-x-4 text-[#888] text-[10px] uppercase font-['Share_Tech_Mono'] tracking-widest">
-                                <span class="flex items-center">
-                                    <span class="w-1.5 h-1.5 bg-[#630909] text-[#630909] status-dot mr-2 inline-block"></span> 
-                                    ON: <span class="text-[#630909] ml-1" id="online-members">0</span> 
-                                </span>
-                                <span class="flex items-center">
-                                    <span class="w-1.5 h-1.5 bg-[#444] mr-2 inline-block"></span> 
-                                    ALL: <span class="ml-1 text-[#aaa]" id="total-members">0</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="font-bold btn-cta mt-4 px-6 py-2.5 sm:ml-4 sm:mt-0 text-[10px]">
-                        JOIN
-                    </div>
-                </a>
             </section>
         </div>
     </main>
@@ -356,7 +280,6 @@
     <script>
         // --- CONFIGURATION ---
         const DISCORD_USER_ID = '1198820197449072660'; 
-        const DISCORD_INVITE_CODE = 'ohno'; 
 
         // --- Video Fade Control Logic ---
         const videoElement = document.getElementById('intro-video');
@@ -487,42 +410,6 @@
             setInterval(fetchLanyardData, 10000);
         }
 
-        // --- Discord Server API ---
-        async function fetchDiscordServerData() {
-            const serverNameEl = document.getElementById('server-name');
-            const onlineMembersEl = document.getElementById('online-members');
-            const totalMembersEl = document.getElementById('total-members');
-            const serverIconEl = document.getElementById('server-icon');
-            const serverLinkEl = document.getElementById('discord-server-link');
-                
-            const apiUrl = `https://discord.com/api/v8/invites/${DISCORD_INVITE_CODE}?with_counts=true`;
-
-            try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error('Failed to fetch Discord server invite data.');
-
-                const data = await response.json();
-                const guild = data.guild;
-
-                serverNameEl.textContent = guild.name || 'UNKNOWN ZONE';
-                onlineMembersEl.textContent = (data.approximate_presence_count || 0).toLocaleString();
-                totalMembersEl.textContent = (data.approximate_member_count || 0).toLocaleString();
-
-                if (guild.icon) {
-                    const iconUrl = `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=128`;
-                    serverIconEl.src = iconUrl;
-                    serverIconEl.onerror = () => serverIconEl.src = "https://placehold.co/64x64/000/b89947?text=DC";
-                }
-                    
-                serverLinkEl.href = `https://discord.gg/${DISCORD_INVITE_CODE}`;
-
-            } catch (error) {
-                console.error("Error fetching Discord invite data:", error);
-                serverNameEl.textContent = 'SERVER_ERROR';
-                serverLinkEl.href = `https://discord.gg/${DISCORD_INVITE_CODE}`; 
-            }
-        }
-
         // --- VHS Static Effect ---
         function initializeRainEffect() {
             const container = document.getElementById('rain-container');
@@ -618,7 +505,6 @@
             videoElement.play().catch(e => console.warn("Video autoplay failed:", e));
 
             initializeLanyard();    
-            fetchDiscordServerData();   
                 
             if (window.initializeAuth) {
                 await window.initializeAuth();
@@ -638,7 +524,7 @@
                 }, 50);
             }, 800); 
         });
-        VIDEO.volume = 0.5;
+        VIDEO.volume = 0.25;
     </script>
 </body>
 </html>
