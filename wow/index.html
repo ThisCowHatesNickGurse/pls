@@ -1,0 +1,269 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIF Dark Transparency Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GIF processing libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/gif-frames@1.0.1/dist/gif-frames.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gifshot@0.4.5/build/gifshot.min.js"></script>
+    <style>
+        .checkerboard {
+            background-image: linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+                linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+                linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        progress::-webkit-progress-value {
+            transition: width 0.3s ease;
+            background-color: #2563eb;
+            border-radius: 9999px;
+        }
+        progress::-webkit-progress-bar {
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
+
+    <div class="max-w-4xl mx-auto p-4 md:p-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">GIF Luminance Alpha Editor</h1>
+            <p class="text-slate-600">Make dark areas transparent based on brightness.</p>
+        </header>
+
+        <main class="bg-white rounded-2xl shadow-xl p-6 md:p-10 border border-slate-200">
+            <!-- Upload Section -->
+            <div id="uploadArea" class="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center hover:border-blue-400 transition-colors cursor-pointer mb-6">
+                <input type="file" id="gifInput" accept="image/gif" class="hidden">
+                <div class="flex flex-col items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span class="text-lg font-medium text-slate-700">Click to upload your GIF</span>
+                    <span class="text-sm text-slate-500 mt-1">Maximum recommended size: 5MB</span>
+                </div>
+            </div>
+
+            <!-- Editor Section -->
+            <div id="editorSection" class="hidden space-y-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Original -->
+                    <div class="space-y-2">
+                        <h3 class="font-semibold text-slate-700">Original</h3>
+                        <div class="bg-slate-100 rounded-lg overflow-hidden border border-slate-200 aspect-square flex items-center justify-center">
+                            <img id="originalPreview" class="max-w-full max-h-full object-contain" src="" alt="Original">
+                        </div>
+                    </div>
+
+                    <!-- Processed Preview -->
+                    <div class="space-y-2">
+                        <h3 class="font-semibold text-slate-700">Preview (First Frame)</h3>
+                        <div class="checkerboard rounded-lg overflow-hidden border border-slate-200 aspect-square flex items-center justify-center relative">
+                            <canvas id="processingCanvas" class="max-w-full max-h-full object-contain"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="bg-slate-50 p-6 rounded-xl space-y-6">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <label class="font-medium text-slate-700">Black Transparency Intensity</label>
+                            <span id="intensityVal" class="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">1.0</span>
+                        </div>
+                        <input type="range" id="intensityRange" min="0" max="2" step="0.1" value="1.0" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div id="progressContainer" class="hidden space-y-2">
+                        <div class="flex justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <span id="progressStatus">Preparing...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <progress id="progressBar" class="w-full h-3 rounded-full overflow-hidden appearance-none" value="0" max="100"></progress>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button id="processBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Generate New GIF
+                        </button>
+                        <button id="resetBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-lg transition-all">
+                            New File
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            <div id="resultSection" class="hidden mt-10 pt-10 border-t border-slate-200 text-center">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">Done!</h2>
+                <div class="checkerboard inline-block rounded-xl overflow-hidden border-4 border-white shadow-xl mb-6">
+                    <img id="finalResult" class="max-w-full h-auto" src="" alt="Final Result">
+                </div>
+                <div>
+                    <a id="downloadLink" download="transparency.gif" class="inline-flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-green-200 transition-all">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Modified GIF
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const gifInput = document.getElementById('gifInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const editorSection = document.getElementById('editorSection');
+        const resultSection = document.getElementById('resultSection');
+        const originalPreview = document.getElementById('originalPreview');
+        const processingCanvas = document.getElementById('processingCanvas');
+        const ctx = processingCanvas.getContext('2d', { willReadFrequently: true });
+        const intensityRange = document.getElementById('intensityRange');
+        const intensityVal = document.getElementById('intensityVal');
+        const processBtn = document.getElementById('processBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressStatus = document.getElementById('progressStatus');
+        const progressPercent = document.getElementById('progressPercent');
+
+        const finalResult = document.getElementById('finalResult');
+        const downloadLink = document.getElementById('downloadLink');
+
+        let currentGifFrames = [];
+        let gifInfo = { width: 0, height: 0 };
+
+        uploadArea.onclick = () => gifInput.click();
+
+        gifInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                originalPreview.src = event.target.result;
+                uploadArea.classList.add('hidden');
+                editorSection.classList.remove('hidden');
+                await loadGifFrames(event.target.result);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        intensityRange.oninput = (e) => {
+            intensityVal.textContent = e.target.value;
+            previewFrame(0);
+        };
+
+        resetBtn.onclick = () => location.reload();
+
+        async function updateProgress(percent, status) {
+            progressBar.value = percent;
+            progressPercent.textContent = Math.round(percent) + '%';
+            if (status) progressStatus.textContent = status;
+            // Small delay to allow UI to breathe
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+
+        async function loadGifFrames(dataUrl) {
+            progressContainer.classList.remove('hidden');
+            await updateProgress(0, "Analyzing GIF...");
+            
+            try {
+                const frames = await gifFrames({ 
+                    url: dataUrl, 
+                    frames: 'all', 
+                    outputType: 'canvas',
+                    cumulative: true 
+                });
+                
+                currentGifFrames = frames.map(f => f.getImage());
+                
+                if (currentGifFrames.length > 0) {
+                    gifInfo.width = currentGifFrames[0].width;
+                    gifInfo.height = currentGifFrames[0].height;
+                    processingCanvas.width = gifInfo.width;
+                    processingCanvas.height = gifInfo.height;
+                    previewFrame(0);
+                    await updateProgress(100, "Ready");
+                    setTimeout(() => progressContainer.classList.add('hidden'), 500);
+                }
+            } catch (err) {
+                alert("Error decoding GIF.");
+            }
+        }
+
+        function previewFrame(index) {
+            if (!currentGifFrames[index]) return;
+            const frameCanvas = currentGifFrames[index];
+            const intensity = parseFloat(intensityRange.value);
+            
+            ctx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
+            ctx.drawImage(frameCanvas, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, processingCanvas.width, processingCanvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const luminance = (0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+                let alpha = luminance * intensity;
+                data[i + 3] = Math.min(255, Math.max(0, alpha));
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        processBtn.onclick = async () => {
+            processBtn.disabled = true;
+            resultSection.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            
+            const intensity = parseFloat(intensityRange.value);
+            const processedImages = [];
+            const totalFrames = currentGifFrames.length;
+
+            // Phase 1: Applying transparency to frames
+            for (let i = 0; i < totalFrames; i++) {
+                const progress = (i / totalFrames) * 40; // Use 0-40% for extraction
+                await updateProgress(progress, `Processing Frame ${i+1}/${totalFrames}...`);
+                previewFrame(i);
+                processedImages.push(processingCanvas.toDataURL('image/png'));
+            }
+
+            await updateProgress(45, "Encoding Final GIF...");
+
+            // Phase 2: Encoding
+            gifshot.createGIF({
+                images: processedImages,
+                gifWidth: gifInfo.width,
+                gifHeight: gifInfo.height,
+                interval: 0.1,
+                numFrames: totalFrames,
+                progressCallback: (captureProgress) => {
+                    // gifshot progress is 0 to 1. Map this to 50-100% range
+                    const totalP = 50 + (captureProgress * 50);
+                    progressBar.value = totalP;
+                    progressPercent.textContent = Math.round(totalP) + '%';
+                    progressStatus.textContent = "Finalizing Encoding...";
+                }
+            }, function (obj) {
+                if (!obj.error) {
+                    finalResult.src = obj.image;
+                    downloadLink.href = obj.image;
+                    resultSection.classList.remove('hidden');
+                    resultSection.scrollIntoView({ behavior: 'smooth' });
+                    progressContainer.classList.add('hidden');
+                } else {
+                    alert("Error: " + obj.error);
+                }
+                processBtn.disabled = false;
+            });
+        };
+    </script>
+</body>
+</html>
