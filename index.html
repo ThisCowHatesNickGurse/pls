@@ -1,530 +1,352 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width,initial-scale=1" name="viewport">
-    <title>@ry</title>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width,initial-scale=1" name="viewport" />
+    <title>@ry // hyper-reactive</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        setLogLevel('silent');
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        window.fb = {};
-
-        if (firebaseConfig) {
-            const app = initializeApp(firebaseConfig);
-            window.fb.db = getFirestore(app);
-            window.fb.auth = getAuth(app);
-            window.fb.appId = appId;
-        }
-
-        window.initializeAuth = async function() {
-            if (!window.fb.auth) return;
-            try {
-                const auth = window.fb.auth;
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                window.fb.userId = auth.currentUser?.uid || crypto.randomUUID();
-            } catch (error) {
-                console.error("Auth error:", error);
-            }
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
 
     <style>
-        /* HIDE SCROLLBARS */
-        ::-webkit-scrollbar {
-            display: none;
-        }
-        html, body {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-
-        body {
-            background-color: #030303;
-            color: #d4d4d4;
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            width: 100vw;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow-x: hidden;
+        ::-webkit-scrollbar { display: none; }
+        html, body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background-color: #000;
+            color: #fff;
+            font-family: "Inter", sans-serif;
+            overflow: hidden;
             margin: 0;
             cursor: crosshair;
-            /* FNAF Vignette effect */
-            box-shadow: inset 0 0 150px rgba(0,0,0,0.95);
         }
         
-        /* CRT Scanline Overlay */
+        :root {
+            --reactive-intensity: 0;
+            --glitch-opacity: 0;
+        }
+
         body::after {
             content: " ";
             display: block;
             position: fixed;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(10, 0, 0, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 255, 0, 0.02));
-            z-index: 2;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0.02));
+            z-index: 20;
             background-size: 100% 3px, 3px 100%;
             pointer-events: none;
         }
 
         #intro-video {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover;
             z-index: 0;
-            /* Made background brighter and easier to see */
-            filter: grayscale(20%) contrast(110%) brightness(0.8);
+            filter: grayscale(100%) contrast(150%) brightness(0.6);
             opacity: 1;
             transition: opacity 3s ease-in-out;
         }
 
-        /* FNAF Static / VHS Tracking Lines */
-        .rain {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 1;
-            mix-blend-mode: screen;
-        }
-        
-        .rain-drop {
-            position: absolute;
-            width: 100vw; height: 2px;
-            background: rgba(255, 255, 255, 0.05); 
-            opacity: 0;
-            animation: vhs-track linear infinite;
-        }
-        
-        @keyframes vhs-track {
-            0% { transform: translateY(-100%); opacity: 0; }
-            50% { opacity: 0.8; }
-            100% { transform: translateY(100vh); opacity: 0; }
-        }
-
-        /* Glitch Text Effect */
-        .glow-text {
-            color: #fff;
-            text-shadow: 3px 0 10px rgba(200, 200, 200, 0.9), -3px 0 10px rgba(0, 0, 0, 0.9);
+        .glitch-card {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            border: 2px solid #fff;
             position: relative;
+            z-index: 10;
+            transition: transform 0.02s linear; /* Faster transition for extreme sensitivity */
+            box-shadow: 0 0 calc(var(--reactive-intensity) * 100px) rgba(255, 255, 255, 0.3);
         }
 
-        #username-title {
-            font-family: 'Share Tech Mono', monospace;
-            font-size: 1.6rem;
-            letter-spacing: 0.15em;
-            margin-bottom: 0.5rem;
-            color: #f5f5f5;
-            text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
-            text-transform: lowercase;
+        .glitch-border-part {
+            position: absolute;
+            top: -4px; left: -4px; right: -4px; bottom: -4px;
+            border: 2px solid #fff;
+            pointer-events: none;
+            opacity: var(--glitch-opacity);
+            z-index: -1;
+        }
+
+        .glitch-border-1 {
+            clip-path: inset(0 0 95% 0);
+            animation: glitch-move-1 0.1s infinite linear;
+        }
+
+        .glitch-border-2 {
+            clip-path: inset(95% 0 0 0);
+            animation: glitch-move-2 0.08s infinite linear;
+        }
+
+        @keyframes glitch-move-1 {
+            0% { transform: translate(calc(var(--reactive-intensity) * -50px), 0); }
+            50% { transform: translate(calc(var(--reactive-intensity) * 50px), 5px); }
+            100% { transform: translate(calc(var(--reactive-intensity) * -50px), -5px); }
+        }
+
+        @keyframes glitch-move-2 {
+            0% { transform: translate(calc(var(--reactive-intensity) * 60px), 0); }
+            50% { transform: translate(calc(var(--reactive-intensity) * -60px), -5px); }
+            100% { transform: translate(calc(var(--reactive-intensity) * 60px), 5px); }
+        }
+
+        .corner-bracket {
+            position: absolute;
+            width: 24px; height: 24px;
+            border: 2px solid #fff;
+        }
+
+        .bracket-tl { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+        .bracket-tr { top: -2px; right: -2px; border-left: 0; border-bottom: 0; }
+        .bracket-bl { bottom: -2px; left: -2px; border-right: 0; border-top: 0; }
+        .bracket-br { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+
+        #visualizer-container {
+            position: fixed;
+            bottom: 0; left: 0; width: 100%;
+            height: 180px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.6;
+            padding: 0 10px;
+        }
+
+        .visualizer-bar {
+            flex: 1;
+            max-width: 10px;
+            background: linear-gradient(to top, rgba(255,255,255,0.1), #fff);
+            border-radius: 2px 2px 0 0;
+            transition: height 0.05s ease;
         }
 
         #splash-screen {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #000;
-            color: #fff;
+            inset: 0;
+            background: #000;
+            z-index: 999;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            z-index: 999;
-            transition: opacity 1s ease;
-        }
-        
-        #splash-screen h1 {
-            font-family: 'Press Start 2P', cursive;
-            font-size: 1.2rem;
-            line-height: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            animation: pulse 2s infinite;
+            transition: opacity 1s;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); text-shadow: 0 0 10px rgba(255,255,255,0.8); }
-            50% { opacity: 0.6; transform: scale(0.98); text-shadow: none; }
+        .bleed-text {
+            font-family: "Press Start 2P", cursive;
+            font-size: 2rem;
+            text-shadow: 0px 5px 2px rgba(255, 255, 255, 0.8);
+            animation: bleed-pulse 2s infinite alternate;
         }
 
-        .spark-particle {
-            position: fixed;
-            width: 3px; height: 3px;
-            background-color: #ffffff;
-            border-radius: 0; 
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 8px 1px rgba(255, 255, 255, 0.8);
-            opacity: 0;
-            z-index: 1000;
-            animation: spark-drift 1s ease-out forwards;
+        @keyframes bleed-pulse {
+            0% { transform: scale(1); text-shadow: 0px 5px 2px rgba(255, 255, 255, 0.8); }
+            100% { transform: scale(1.05); text-shadow: 0px 15px 10px rgba(255, 255, 255, 0.4); }
         }
 
-        @keyframes spark-drift {
-            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 0.9; }
-            100% { transform: translate(calc(-50% + var(--drift-x)), calc(-50% + var(--drift-y))) scale(0) rotate(45deg); opacity: 0; }
-        }
-
-        /* Transparent Profile Card (See background through it) */
-        .fnaf-card {
-            background: rgba(10, 10, 10, 0.4); /* Translucent */
-            backdrop-filter: blur(4px); /* Glass effect */
-            border: 2px solid rgba(81,0,0, 0.3); /* Dirty gold FNAF border */
-            box-shadow: 
-                0 0 0 1px rgba(0, 0, 0, 0.8), 
-                0 30px 80px rgba(0, 0, 0, 0.7),
-                inset 0 0 40px rgba(0, 0, 0, 0.6); 
-            position: relative;
-            z-index: 10;
-        }
-
-        /* Card Hardware Accents */
-        .corner-bracket {
+        .rain-drop {
             position: absolute;
-            width: 24px; height: 24px;
-            border: 2px solid rgba(81,0,0, 0.6); /* Dirty Gold */
+            width: 100vw;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.05);
             pointer-events: none;
-            z-index: 11;
-        }
-        .bracket-tl { top: -2px; left: -2px; border-right: none; border-bottom: none; }
-        .bracket-tr { top: -2px; right: -2px; border-left: none; border-bottom: none; }
-        .bracket-bl { bottom: -2px; left: -2px; border-right: none; border-top: none; }
-        .bracket-br { bottom: -2px; right: -2px; border-left: none; border-top: none; }
-
-        #main-content {
-            transition: transform 0.3s ease-out, opacity 1s;
-            transform-style: preserve-3d;
-            transform: perspective(1000px) rotateX(0) rotateY(0);
+            animation: glitch-track linear infinite;
         }
 
-        .status-dot { box-shadow: 0 0 10px currentColor; }
-        
-        #profile-picture {
-            border: 1px solid rgba(81,0,0, 0.5);
-            background: rgba(0, 0, 0, 0.5); /* Let video show through behind pfp if it's transparent */
-            box-shadow: 0 10px 25px rgba(0,0,0,0.9), inset 0 0 15px rgba(0,0,0,0.5);
-        }
-
-        /* FNAF Security Camera Overlay */
-        .fnaf-overlay-text {
-            font-family: 'Share Tech Mono', monospace;
-            color: white;
-            text-shadow: 1px 1px 2px black;
-            z-index: 50;
-            pointer-events: none;
+        @keyframes glitch-track {
+            0% { transform: translateY(-100%); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(100vh); opacity: 0; }
         }
     </style>
 </head>
-<body class="lowercase">
-    
-    <div class="fixed top-6 left-8 text-2xl flex items-center fnaf-overlay-text opacity-90 hidden" id="rec-indicator">
-        <div class="w-4 h-4 bg-red-600 rounded-full animate-pulse mr-3 shadow-[0_0_8px_red]"></div> REC
-    </div>
-    <div class="fixed top-6 right-8 text-2xl fnaf-overlay-text opacity-90 hidden" id="cam-indicator">
-        CAM 01
+<body class="lowercase flex justify-center items-center min-h-screen">
+
+    <div class="fixed top-6 left-8 text-xl flex items-center z-50 hidden" id="rec-indicator" style="font-family: 'Share Tech Mono'">
+        <div class="w-4 h-4 bg-white rounded-full animate-pulse mr-3 shadow-[0_0_8px_white]"></div>
+        REC
     </div>
 
-    <div id="cursor-dot"></div>
-    
-    <video id="intro-video" playsinline src="fullscreen.mp4"></video>
-    
-    <div class="rain" id="rain-container"></div>
+    <video id="intro-video" loop playsinline crossorigin="anonymous" src="fullscreen.mp4"></video>
+
+    <div id="visualizer-container"></div>
+    <div class="fixed inset-0 pointer-events-none z-1" id="rain-container"></div>
     
     <div id="splash-screen">
-        <h1 class="glow-text font-extrabold sm:text-4xl text-2xl tracking-widest text-center">SIGNAL LOST<br><span class="text-sm mt-4 block text-gray-400">click to reboot</span></h1>
+        <h1 class="bleed-text">PRESS ME</h1>
     </div>
 
-    <main class="flex items-center w-full duration-1000 min-h-[100dvh] hidden justify-center opacity-0 relative z-10 py-12 overflow-y-auto" id="main-content">
-        
-        <div class="w-[95%] sm:w-full fnaf-card max-w-md mx-auto p-8 sm:p-10">
+    <main class="hidden opacity-0 transition-opacity duration-1000 w-full max-w-md p-8" id="main-content">
+        <div class="glitch-card p-10 text-center" id="reactive-card">
+            <div class="glitch-border-part glitch-border-1"></div>
+            <div class="glitch-border-part glitch-border-2"></div>
             
             <div class="corner-bracket bracket-tl"></div>
             <div class="corner-bracket bracket-tr"></div>
             <div class="corner-bracket bracket-bl"></div>
             <div class="corner-bracket bracket-br"></div>
-            
-            <header class="mb-8 text-center">
-                <div class="flex items-center justify-center h-28 mb-6 mx-auto overflow-hidden p-1 w-28 relative" id="profile-picture">
-                    <svg class="w-full h-full p-3 text-[#630909]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                </div>
-                <h1 class="mb-2" id="username-title"></h1>
-                <p class="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase font-['Share_Tech_Mono']" id="discord-status">SYSTEM OFFLINE</p>
-                <div class="border border-[#630909]/30 bg-[rgba(0,0,0,0.6)] text-gray-300 shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] font-['Share_Tech_Mono'] hidden max-w-xs mt-5 mx-auto p-3 text-center text-[10px] tracking-wider" id="discord-activity"></div>
-            </header>
 
-            <div class="h-[1px] w-32 mx-auto mb-8 bg-gradient-to-r from-transparent via-[#630909] to-transparent shadow-[0_0_8px_rgba(81,0,0,0.5)]"></div>
+            <div id="profile-picture" class="w-28 h-28 mx-auto mb-6 border-2 border-white overflow-hidden bg-black shadow-lg">
+                <svg class="w-full h-full p-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+
+            <h1 id="username-title" class="mb-2 text-2xl tracking-tighter h-8" style="font-family: 'Share Tech Mono'"></h1>
+            <p id="discord-status" class="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase mb-4">SYSTEM OFFLINE</p>
             
-            <section class="text-center">
-                <p class="text-gray-300 text-xs font-['Share_Tech_Mono'] tracking-widest uppercase whitespace-pre-wrap">"Wagwan."</p>
-            </section>
+            <div class="h-[1px] w-32 mx-auto my-8 bg-gradient-to-r from-transparent via-white to-transparent"></div>
+            <p class="text-gray-300 text-xs tracking-widest italic opacity-80" id="quote">"And I got money to burn and nothing to save.."</p>
         </div>
     </main>
 
     <script>
-        // --- CONFIGURATION ---
-        const DISCORD_USER_ID = '1198820197449072660'; 
-
-        // --- Video Fade Control Logic ---
-        const videoElement = document.getElementById('intro-video');
+        const DISCORD_USER_ID = '1198820197449072660';
+        const video = document.getElementById('intro-video');
+        const reactiveCard = document.getElementById('reactive-card');
+        const visualizerContainer = document.getElementById('visualizer-container');
         
-        videoElement.addEventListener('timeupdate', () => {
-            if (videoElement.duration - videoElement.currentTime <= 3 && !videoElement.classList.contains('fading')) {
-                videoElement.classList.add('fading');
-                videoElement.style.opacity = '0';
-            }
-        });
+        let audioCtx, analyser, source;
+        const BAR_COUNT = 48;
+        const bars = [];
+        
+        /* EXTREME SENSITIVITY CONFIG */
+        const FREQ_THRESHOLD = 0.05; // Extremely low - captures almost any sound
+        const SHAKE_MULTIPLIER = 50; // Violent shake intensity
+        const SMOOTHING_FACTOR = 0.6; // Higher number = faster response to transients
+        let smoothedIntensity = 0;
 
-        videoElement.addEventListener('ended', () => {
-            videoElement.currentTime = 0;
-            videoElement.play();
-            videoElement.classList.remove('fading');
-            videoElement.style.opacity = '1'; 
-        });
-
-        // --- Typewriter Effect Logic ---
-        const DISPLAY_SEQUENCE = ['@', '@r', '@ry', '@r']; 
-        const TYPING_SPEED = 140; 
-        const DELETING_SPEED = 70;
-        const PAUSE_TIME = 1200;
-        const VIDEO = document.getElementById('intro-video');
-        let sequenceIndex = 0;
-        let charIndex = 0;
-        let h1Element;
-        let titleElement;
-
-        function typeWriterLoop() {
-            if (!h1Element) h1Element = document.getElementById('username-title');
-            if (!titleElement) titleElement = document.getElementsByTagName('title')[0];
-
-            const targetText = DISPLAY_SEQUENCE[sequenceIndex];
-            const isTyping = targetText.length > charIndex;
-            const isPausing = targetText.length === charIndex;
-            const isDeleting = targetText.length < charIndex;
-            let currentDelay = isTyping ? TYPING_SPEED : DELETING_SPEED;
-
-            if (isPausing) {
-                let delay = PAUSE_TIME; 
-                if (targetText === '') delay = PAUSE_TIME * 1.5;
-                sequenceIndex = (sequenceIndex + 1) % DISPLAY_SEQUENCE.length;
-                setTimeout(typeWriterLoop, delay);
-                return;
+        const SEQUENCE = ['@', '@r', '@ry', '@r'];
+        let seqIdx = 0, charIdx = 0;
+        
+        function type() {
+            const target = SEQUENCE[seqIdx];
+            const display = target.substring(0, charIdx);
+            const titleEl = document.getElementById('username-title');
+            if (titleEl) {
+                titleEl.innerHTML = display + '<span class="animate-pulse">_</span>';
+                document.title = display || '...';
             }
 
-            if (isTyping) charIndex++;
-            else if (isDeleting) charIndex--;
-
-            const currentDisplay = targetText.substring(0, charIndex);
-            
-            // Terminal block cursor
-            if (h1Element) h1Element.innerHTML = currentDisplay + '<span class="text-[#ffffff] animate-pulse">_</span>'; 
-            titleElement.textContent = currentDisplay || '...';
-
-            setTimeout(typeWriterLoop, currentDelay);
-        }
-
-        // --- Lanyard API Fetch ---
-        function updateDiscordPresence(data) {
-            const statusEl = document.getElementById('discord-status');
-            const activityEl = document.getElementById('discord-activity');
-            const pfpContainer = document.getElementById('profile-picture');
-                
-            if (!data || data.error) {
-                statusEl.textContent = 'DATA UNAVAILABLE';
-                activityEl.classList.add('hidden');
-                return;
-            }
-
-            const { discord_status, activities, discord_user } = data.data;
-
-            let statusText = 'OFFLINE';
-            let statusColor = 'text-[#666]';
-
-            switch (discord_status) {
-                case 'online':
-                    statusText = 'ONLINE';
-                    statusColor = 'text-[#22c55e]'; // Security Camera Green
-                    break;
-                case 'idle':
-                    statusText = 'IDLE';
-                    statusColor = 'text-[#eab308]'; // Warning Yellow
-                    break;
-                case 'dnd':
-                    statusText = 'DO NOT DISTURB';
-                    statusColor = 'text-[#ef4444]'; // Error Red
-                    break;
-            }
-
-            statusEl.className = `text-[10px] font-bold uppercase tracking-[0.3em] font-['Share_Tech_Mono'] ${statusColor}`;
-            statusEl.innerHTML = `<span class="w-1.5 h-1.5 inline-block bg-current status-dot mr-2 align-middle mb-0.5"></span>${statusText} // user: ${discord_user.username}`;
-
-            if (discord_user && discord_user.avatar) {
-                const avatarUrl = `https://cdn.discordapp.com/avatars/${discord_user.id}/${discord_user.avatar}.png?size=256`;
-                pfpContainer.innerHTML = `<img id="pfp-img" src="${avatarUrl}" alt="User Avatar" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/128x128/000/b89947?text=ERR';">`;
-            }
-
-            const gamingActivity = activities.find(a => a.type === 0);
-            const listeningActivity = activities.find(a => a.type === 2);
-                
-            activityEl.innerHTML = '';
-                
-            if (gamingActivity) {
-                activityEl.classList.remove('hidden');
-                activityEl.innerHTML = `<span class="text-[#630909]">> EXE:</span> ${gamingActivity.name}`;
-            } else if (listeningActivity) {
-                activityEl.classList.remove('hidden');
-                activityEl.innerHTML = `<span class="text-[#630909]">> AUDIO:</span> ${listeningActivity.details || listeningActivity.name}`;
+            if (charIdx < target.length) {
+                charIdx++;
+                setTimeout(type, 150);
             } else {
-                activityEl.classList.add('hidden');
+                seqIdx = (seqIdx + 1) % SEQUENCE.length;
+                charIdx = 0;
+                setTimeout(type, 1500);
             }
         }
 
-        async function fetchLanyardData() {
+        function initVisualizer() {
+            for (let i = 0; i < BAR_COUNT; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'visualizer-bar';
+                visualizerContainer.appendChild(bar);
+                bars.push(bar);
+            }
+
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            source = audioCtx.createMediaElementSource(video);
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function update() {
+                requestAnimationFrame(update);
+                analyser.getByteFrequencyData(dataArray);
+
+                let highFreqSum = 0;
+                let highCount = 0;
+                
+                // Focusing heavily on the right side (60% to 100% of spectrum)
+                for(let i = Math.floor(bufferLength * 0.6); i < bufferLength; i++) {
+                    highFreqSum += dataArray[i];
+                    highCount++;
+                }
+                
+                let rawIntensity = highFreqSum / (highCount * 255);
+                
+                // Linearize the response for maximum sensitivity
+                let processed = rawIntensity > FREQ_THRESHOLD ? (rawIntensity - FREQ_THRESHOLD) / (1 - FREQ_THRESHOLD) : 0;
+                processed = Math.pow(processed, 1.2); 
+                
+                // Aggressive smoothing
+                smoothedIntensity += (processed - smoothedIntensity) * SMOOTHING_FACTOR;
+
+                document.documentElement.style.setProperty('--reactive-intensity', smoothedIntensity);
+                document.documentElement.style.setProperty('--glitch-opacity', smoothedIntensity > 0.01 ? 1 : 0);
+
+                if (smoothedIntensity > 0.005) {
+                    const shakeX = (Math.random() - 0.5) * smoothedIntensity * SHAKE_MULTIPLIER;
+                    const shakeY = (Math.random() - 0.5) * smoothedIntensity * SHAKE_MULTIPLIER;
+                    reactiveCard.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+                } else {
+                    reactiveCard.style.transform = `translate(0, 0)`;
+                }
+
+                for (let i = 0; i < BAR_COUNT; i++) {
+                    const val = dataArray[i] || 0;
+                    const height = (val / 255) * 100;
+                    bars[i].style.height = `${Math.max(2, height)}%`;
+                    bars[i].style.opacity = 0.2 + (val / 255) * 0.8;
+                }
+            }
+            update();
+        }
+
+        async function fetchLanyard() {
             try {
-                const response = await fetch(`https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`);
-                const data = await response.json();
-                updateDiscordPresence(data);
-            } catch (error) {
-                console.error('Lanyard fetch error:', error);
-            }
+                const res = await fetch(`https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`);
+                const { data } = await res.json();
+                const statusEl = document.getElementById('discord-status');
+                const statusMap = { online: '🟢', idle: '🌙', dnd: '🔴', offline: '⚫' };
+                const dot = statusMap[data.discord_status] || '⚫';
+                statusEl.textContent = `${dot} ${data.discord_status} // ${data.discord_user.username}`;
+                if (data.discord_user.avatar) {
+                    document.getElementById('profile-picture').innerHTML = `<img src="https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.png?size=256" class="w-full h-full object-cover">`;
+                }
+            } catch (e) { console.error("Lanyard Error:", e); }
         }
 
-        function initializeLanyard() {
-            fetchLanyardData();
-            setInterval(fetchLanyardData, 10000);
-        }
-
-        // --- VHS Static Effect ---
-        function initializeRainEffect() {
+        function initRain() {
             const container = document.getElementById('rain-container');
-            const density = 15; // Fewer lines, but horizontal tracking artifacts
-
-            for (let i = 0; i < density; i++) {
+            for(let i=0; i<30; i++) {
                 const drop = document.createElement('div');
-                drop.classList.add('rain-drop');
-
-                const duration = Math.random() * 2 + 1 + 's'; 
-                const delay = Math.random() * 5 + 's';
-                const thickness = Math.random() * 3 + 1;
-
-                drop.style.height = thickness + 'px';
-                drop.style.animationDuration = duration;
-                drop.style.animationDelay = delay;
-
+                drop.className = 'rain-drop';
+                drop.style.left = Math.random() * 100 + 'vw';
+                drop.style.top = Math.random() * 100 + 'vh';
+                drop.style.animationDuration = (Math.random() * 0.3 + 0.1) + 's';
+                drop.style.animationDelay = Math.random() * 2 + 's';
                 container.appendChild(drop);
             }
         }
 
-        // --- Custom Cursor Spark Effect ---
-        const particleContainer = document.getElementById('cursor-dot');
-        particleContainer.style.width = '0';
-        particleContainer.style.height = '0';
-
-        let lastMoveTime = 0;
-        const EMIT_INTERVAL = 50; 
-
-        function createSparkParticle(x, y) {
-            const spark = document.createElement('div');
-            spark.classList.add('spark-particle');
-                
-            spark.style.left = x + 'px';
-            spark.style.top = y + 'px';
-                
-            const driftX = Math.floor(Math.random() * 120) - 60; 
-            const driftY = Math.floor(Math.random() * 120) - 60; 
-                
-            spark.style.setProperty('--drift-x', `${driftX}px`);
-            spark.style.setProperty('--drift-y', `${driftY}px`);
-                
-            particleContainer.appendChild(spark);
-                
-            setTimeout(() => { spark.remove(); }, 1000); 
-        }
-
-        document.addEventListener('mousemove', (e) => {
-            const currentTime = Date.now();
-            if (currentTime - lastMoveTime < EMIT_INTERVAL) return;
-            lastMoveTime = currentTime;
-            createSparkParticle(e.clientX, e.clientY);
-        });
-
-        // --- Parallax Tilt Effect ---
-        const tiltElement = document.getElementById('main-content');
-        const MAX_TILT = 3; 
-
-        document.addEventListener('mousemove', (e) => {
-            if (tiltElement.classList.contains('hidden')) return;
-
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-
-            const centerX = width / 2;
-            const centerY = height / 2;
-
-            const mouseX = e.clientX - centerX;
-            const mouseY = e.clientY - centerY;
-
-            const percentX = (mouseX / centerX) * 100;
-            const percentY = (mouseY / centerY) * 100;
-
-            const rotateX = -(percentY / 100) * MAX_TILT; 
-            const rotateY = (percentX / 100) * MAX_TILT;
-
-            tiltElement.style.transform = `perspective(1500px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-        });
-
-        document.addEventListener('mouseleave', () => {
-            tiltElement.style.transform = 'perspective(1500px) rotateX(0deg) rotateY(0deg)';
-        });
-
-        // --- Splash Screen Init ---
-        document.getElementById('splash-screen').addEventListener('click', async function() {
-            const splash = this;
-            const content = document.getElementById('main-content');
-            
-            // Show FNAF overlays
-            document.getElementById('rec-indicator').classList.remove('hidden');
-            document.getElementById('cam-indicator').classList.remove('hidden');
-
-            videoElement.play().catch(e => console.warn("Video autoplay failed:", e));
-
-            initializeLanyard();    
-                
-            if (window.initializeAuth) {
-                await window.initializeAuth();
-            }
-                
-            initializeRainEffect();
-            typeWriterLoop();
-
-            splash.style.opacity = '0';
+        document.getElementById('splash-screen').addEventListener('click', function() {
+            this.style.opacity = '0';
+            initVisualizer(); 
 
             setTimeout(() => {
-                splash.classList.add('hidden');
-                splash.remove();    
-                content.classList.remove('hidden');
-                setTimeout(() => {
-                    content.style.opacity = '1';
-                }, 50);
-            }, 800); 
+                this.remove();
+                const main = document.getElementById('main-content');
+                main.classList.remove('hidden');
+                setTimeout(() => main.style.opacity = '1', 50);
+                document.getElementById('rec-indicator').classList.remove('hidden');
+            }, 1000);
+
+            video.play();
+            initRain();
+            type();
+            fetchLanyard();
+            setInterval(fetchLanyard, 30000);
         });
-        VIDEO.volume = 0.25;
     </script>
 </body>
 </html>
