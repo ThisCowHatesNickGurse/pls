@@ -267,9 +267,9 @@
                 let highCount = 0;
                 
                 // Focusing heavily on the right side (60% to 100% of spectrum)
-                for(let i = Math.floor(bufferLength * 0.1); i < bufferLength; i++) {
-                    highFreqSum += dataArray[i];
-                    highCount++;
+                for (let i = 0; i < Math.floor(bufferLength * 0.1); i++) {
+                    lowFreqSum += dataArray[i];
+                    lowCount++;
                 }
                 
                 let rawIntensity = highFreqSum / (highCount * 255);
