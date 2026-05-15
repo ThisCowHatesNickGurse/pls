@@ -263,16 +263,16 @@
                 requestAnimationFrame(update);
                 analyser.getByteFrequencyData(dataArray);
 
-                let highFreqSum = 0;
-                let highCount = 0;
+                let lowFreqSum = 0;
+                let lowCount = 0;
                 
-                // Focusing heavily on the right side (60% to 100% of spectrum)
+                // Focusing heavily on the left side (0% to 10% of spectrum) for Bass response
                 for (let i = 0; i < Math.floor(bufferLength * 0.1); i++) {
                     lowFreqSum += dataArray[i];
                     lowCount++;
                 }
                 
-                let rawIntensity = highFreqSum / (highCount * 255);
+                let rawIntensity = lowFreqSum / (lowCount * 255);
                 
                 // Linearize the response for maximum sensitivity
                 let processed = rawIntensity > FREQ_THRESHOLD ? (rawIntensity - FREQ_THRESHOLD) / (1 - FREQ_THRESHOLD) : 0;
