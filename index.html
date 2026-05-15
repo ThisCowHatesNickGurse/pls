@@ -210,13 +210,13 @@
         const visualizerContainer = document.getElementById('visualizer-container');
         
         let audioCtx, analyser, source;
-        const BAR_COUNT = 48;
+        const BAR_COUNT = 100;
         const bars = [];
         
         /* EXTREME SENSITIVITY CONFIG */
-        const FREQ_THRESHOLD = 0.05; // Extremely low - captures almost any sound
+        const FREQ_THRESHOLD = 0.5; // Extremely low - captures almost any sound
         const SHAKE_MULTIPLIER = 50; // Violent shake intensity
-        const SMOOTHING_FACTOR = 0.6; // Higher number = faster response to transients
+        const SMOOTHING_FACTOR = 1; // Higher number = faster response to transients
         let smoothedIntensity = 0;
 
         const SEQUENCE = ['@', '@r', '@ry', '@r'];
@@ -267,7 +267,7 @@
                 let highCount = 0;
                 
                 // Focusing heavily on the right side (60% to 100% of spectrum)
-                for(let i = Math.floor(bufferLength * 0.6); i < bufferLength; i++) {
+                for(let i = Math.floor(bufferLength * 0.1); i < bufferLength; i++) {
                     highFreqSum += dataArray[i];
                     highCount++;
                 }
