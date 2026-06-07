@@ -1,352 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta content="width=device-width,initial-scale=1" name="viewport" />
-    <title>@ry // hyper-reactive</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        ::-webkit-scrollbar { display: none; }
-        html, body { 
-            -ms-overflow-style: none; 
-            scrollbar-width: none; 
-            background-color: #000;
-            color: #fff;
-            font-family: "Inter", sans-serif;
-            overflow: hidden;
+        * {
             margin: 0;
-            cursor: crosshair;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
-        :root {
-            --reactive-intensity: 0;
-            --glitch-opacity: 0;
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: sans-serif;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
-        body::after {
-            content: " ";
-            display: block;
+        /* Full-screen tap overlay */
+        #overlay {
             position: fixed;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
-                        linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0.02));
-            z-index: 20;
-            background-size: 100% 3px, 3px 100%;
-            pointer-events: none;
-        }
-
-        #intro-video {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover;
-            z-index: 0;
-            filter: grayscale(100%) contrast(150%) brightness(0.6);
-            opacity: 1;
-            transition: opacity 3s ease-in-out;
-        }
-
-        .glitch-card {
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
-            border: 2px solid #fff;
-            position: relative;
-            z-index: 10;
-            transition: transform 0.02s linear; /* Faster transition for extreme sensitivity */
-            box-shadow: 0 0 calc(var(--reactive-intensity) * 100px) rgba(255, 255, 255, 0.3);
-        }
-
-        .glitch-border-part {
-            position: absolute;
-            top: -4px; left: -4px; right: -4px; bottom: -4px;
-            border: 2px solid #fff;
-            pointer-events: none;
-            opacity: var(--glitch-opacity);
-            z-index: -1;
-        }
-
-        .glitch-border-1 {
-            clip-path: inset(0 0 95% 0);
-            animation: glitch-move-1 0.1s infinite linear;
-        }
-
-        .glitch-border-2 {
-            clip-path: inset(95% 0 0 0);
-            animation: glitch-move-2 0.08s infinite linear;
-        }
-
-        @keyframes glitch-move-1 {
-            0% { transform: translate(calc(var(--reactive-intensity) * -50px), 0); }
-            50% { transform: translate(calc(var(--reactive-intensity) * 50px), 5px); }
-            100% { transform: translate(calc(var(--reactive-intensity) * -50px), -5px); }
-        }
-
-        @keyframes glitch-move-2 {
-            0% { transform: translate(calc(var(--reactive-intensity) * 60px), 0); }
-            50% { transform: translate(calc(var(--reactive-intensity) * -60px), -5px); }
-            100% { transform: translate(calc(var(--reactive-intensity) * 60px), 5px); }
-        }
-
-        .corner-bracket {
-            position: absolute;
-            width: 24px; height: 24px;
-            border: 2px solid #fff;
-        }
-
-        .bracket-tl { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
-        .bracket-tr { top: -2px; right: -2px; border-left: 0; border-bottom: 0; }
-        .bracket-bl { bottom: -2px; left: -2px; border-right: 0; border-top: 0; }
-        .bracket-br { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
-
-        #visualizer-container {
-            position: fixed;
-            bottom: 0; left: 0; width: 100%;
-            height: 180px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 3px;
-            z-index: 5;
-            pointer-events: none;
-            opacity: 0.6;
-            padding: 0 10px;
-        }
-
-        .visualizer-bar {
-            flex: 1;
-            max-width: 10px;
-            background: linear-gradient(to top, rgba(255,255,255,0.1), #fff);
-            border-radius: 2px 2px 0 0;
-            transition: height 0.05s ease;
-        }
-
-        #splash-screen {
-            position: fixed;
-            inset: 0;
-            background: #000;
-            z-index: 999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4); /* Dimmed background */
             display: flex;
             justify-content: center;
             align-items: center;
+            z-index: 10;
             cursor: pointer;
-            transition: opacity 1s;
+            transition: opacity 0.3s ease;
         }
 
-        .bleed-text {
-            font-family: "Press Start 2P", cursive;
-            font-size: 2rem;
-            text-shadow: 0px 5px 2px rgba(255, 255, 255, 0.8);
-            animation: bleed-pulse 2s infinite alternate;
-        }
-
-        @keyframes bleed-pulse {
-            0% { transform: scale(1); text-shadow: 0px 5px 2px rgba(255, 255, 255, 0.8); }
-            100% { transform: scale(1.05); text-shadow: 0px 15px 10px rgba(255, 255, 255, 0.4); }
-        }
-
-        .rain-drop {
-            position: absolute;
-            width: 100vw;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.05);
-            pointer-events: none;
-            animation: glitch-track linear infinite;
-        }
-
-        @keyframes glitch-track {
-            0% { transform: translateY(-100%); opacity: 0; }
-            50% { opacity: 0.5; }
-            100% { transform: translateY(100vh); opacity: 0; }
+        /* The actual button box */
+        .play-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            pointer-events: none; /* Let clicks pass through to the overlay container */
         }
     </style>
 </head>
-<body class="lowercase flex justify-center items-center min-h-screen">
+<body>
 
-    <div class="fixed top-6 left-8 text-xl flex items-center z-50 hidden" id="rec-indicator" style="font-family: 'Share Tech Mono'">
-        <div class="w-4 h-4 bg-white rounded-full animate-pulse mr-3 shadow-[0_0_8px_white]"></div>
-        REC
+    <div id="overlay">
+        <div class="play-btn">Tap to Play</div>
     </div>
 
-    <video id="intro-video" loop playsinline crossorigin="anonymous" src="fullscreen.mp4"></video>
-
-    <div id="visualizer-container"></div>
-    <div class="fixed inset-0 pointer-events-none z-1" id="rain-container"></div>
-    
-    <div id="splash-screen">
-        <h1 class="bleed-text">PRESS ME</h1>
-    </div>
-
-    <main class="hidden opacity-0 transition-opacity duration-1000 w-full max-w-md p-8" id="main-content">
-        <div class="glitch-card p-10 text-center" id="reactive-card">
-            <div class="glitch-border-part glitch-border-1"></div>
-            <div class="glitch-border-part glitch-border-2"></div>
-            
-            <div class="corner-bracket bracket-tl"></div>
-            <div class="corner-bracket bracket-tr"></div>
-            <div class="corner-bracket bracket-bl"></div>
-            <div class="corner-bracket bracket-br"></div>
-
-            <div id="profile-picture" class="w-28 h-28 mx-auto mb-6 border-2 border-white overflow-hidden bg-black shadow-lg">
-                <svg class="w-full h-full p-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-            </div>
-
-            <h1 id="username-title" class="mb-2 text-2xl tracking-tighter h-8" style="font-family: 'Share Tech Mono'"></h1>
-            <p id="discord-status" class="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase mb-4">SYSTEM OFFLINE</p>
-            
-            <div class="h-[1px] w-32 mx-auto my-8 bg-gradient-to-r from-transparent via-white to-transparent"></div>
-            <p class="text-gray-300 text-xs tracking-widest italic opacity-80" id="quote">"And I got money to burn and nothing to save.."</p>
-        </div>
-    </main>
+    <video id="myVideo" controls autoplay muted playsinline>
+        <source src="https://cdn.discordapp.com/attachments/1502109845820538910/1512993500457603092/OY_qk1Mf4sbvGqGE.mp4?ex=6a261c80&is=6a24cb00&hm=c467bb014e67c0103c8b4cead4e92825e0fcd712f50dde528893e49332995fc5&" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
 
     <script>
-        const DISCORD_USER_ID = '1198820197449072660';
-        const video = document.getElementById('intro-video');
-        const reactiveCard = document.getElementById('reactive-card');
-        const visualizerContainer = document.getElementById('visualizer-container');
-        
-        let audioCtx, analyser, source;
-        const BAR_COUNT = 100;
-        const bars = [];
-        
-        /* EXTREME SENSITIVITY CONFIG */
-        const FREQ_THRESHOLD = 0.75; // Extremely low - captures almost any sound
-        const SHAKE_MULTIPLIER = 50; // Violent shake intensity
-        const SMOOTHING_FACTOR = 1; // Higher number = faster response to transients
-        let smoothedIntensity = 0;
+        const video = document.getElementById('myVideo');
+        const overlay = document.getElementById('overlay');
 
-        const SEQUENCE = ['@', '@r', '@ry', '@r'];
-        let seqIdx = 0, charIdx = 0;
-        
-        function type() {
-            const target = SEQUENCE[seqIdx];
-            const display = target.substring(0, charIdx);
-            const titleEl = document.getElementById('username-title');
-            if (titleEl) {
-                titleEl.innerHTML = display + '<span class="animate-pulse">_</span>';
-                document.title = display || '...';
-            }
-
-            if (charIdx < target.length) {
-                charIdx++;
-                setTimeout(type, 150);
-            } else {
-                seqIdx = (seqIdx + 1) % SEQUENCE.length;
-                charIdx = 0;
-                setTimeout(type, 1500);
-            }
-        }
-
-        function initVisualizer() {
-            for (let i = 0; i < BAR_COUNT; i++) {
-                const bar = document.createElement('div');
-                bar.className = 'visualizer-bar';
-                visualizerContainer.appendChild(bar);
-                bars.push(bar);
-            }
-
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioCtx.createAnalyser();
-            source = audioCtx.createMediaElementSource(video);
-            source.connect(analyser);
-            analyser.connect(audioCtx.destination);
+        overlay.addEventListener('click', () => {
+            video.muted = false; // Unmute the audio
+            video.currentTime = 0; // Optional: Restart the video from the beginning when tapped
+            video.play(); // Ensure it plays
             
-            analyser.fftSize = 256;
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-
-            function update() {
-                requestAnimationFrame(update);
-                analyser.getByteFrequencyData(dataArray);
-
-                let lowFreqSum = 0;
-                let lowCount = 0;
-                
-                // Focusing heavily on the left side (0% to 10% of spectrum) for Bass response
-                for (let i = 0; i < Math.floor(bufferLength * 0.1); i++) {
-                    lowFreqSum += dataArray[i];
-                    lowCount++;
-                }
-                
-                let rawIntensity = lowFreqSum / (lowCount * 255);
-                
-                // Linearize the response for maximum sensitivity
-                let processed = rawIntensity > FREQ_THRESHOLD ? (rawIntensity - FREQ_THRESHOLD) / (1 - FREQ_THRESHOLD) : 0;
-                processed = Math.pow(processed, 1.2); 
-                
-                // Aggressive smoothing
-                smoothedIntensity += (processed - smoothedIntensity) * SMOOTHING_FACTOR;
-
-                document.documentElement.style.setProperty('--reactive-intensity', smoothedIntensity);
-                document.documentElement.style.setProperty('--glitch-opacity', smoothedIntensity > 0.01 ? 1 : 0);
-
-                if (smoothedIntensity > 0.005) {
-                    const shakeX = (Math.random() - 0.5) * smoothedIntensity * SHAKE_MULTIPLIER;
-                    const shakeY = (Math.random() - 0.5) * smoothedIntensity * SHAKE_MULTIPLIER;
-                    reactiveCard.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
-                } else {
-                    reactiveCard.style.transform = `translate(0, 0)`;
-                }
-
-                for (let i = 0; i < BAR_COUNT; i++) {
-                    const val = dataArray[i] || 0;
-                    const height = (val / 255) * 100;
-                    bars[i].style.height = `${Math.max(2, height)}%`;
-                    bars[i].style.opacity = 0.2 + (val / 255) * 0.8;
-                }
-            }
-            update();
-        }
-
-        async function fetchLanyard() {
-            try {
-                const res = await fetch(`https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`);
-                const { data } = await res.json();
-                const statusEl = document.getElementById('discord-status');
-                const statusMap = { online: '🟢', idle: '🌙', dnd: '🔴', offline: '⚫' };
-                const dot = statusMap[data.discord_status] || '⚫';
-                statusEl.textContent = `${dot} ${data.discord_status} // ${data.discord_user.username}`;
-                if (data.discord_user.avatar) {
-                    document.getElementById('profile-picture').innerHTML = `<img src="https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.png?size=256" class="w-full h-full object-cover">`;
-                }
-            } catch (e) { console.error("Lanyard Error:", e); }
-        }
-
-        function initRain() {
-            const container = document.getElementById('rain-container');
-            for(let i=0; i<30; i++) {
-                const drop = document.createElement('div');
-                drop.className = 'rain-drop';
-                drop.style.left = Math.random() * 100 + 'vw';
-                drop.style.top = Math.random() * 100 + 'vh';
-                drop.style.animationDuration = (Math.random() * 0.3 + 0.1) + 's';
-                drop.style.animationDelay = Math.random() * 2 + 's';
-                container.appendChild(drop);
-            }
-        }
-
-        document.getElementById('splash-screen').addEventListener('click', function() {
-            this.style.opacity = '0';
-            initVisualizer(); 
-
+            // Hide the overlay
+            overlay.style.opacity = '0';
             setTimeout(() => {
-                this.remove();
-                const main = document.getElementById('main-content');
-                main.classList.remove('hidden');
-                setTimeout(() => main.style.opacity = '1', 50);
-                document.getElementById('rec-indicator').classList.remove('hidden');
-            }, 1000);
-
-            video.play();
-            initRain();
-            type();
-            fetchLanyard();
-            setInterval(fetchLanyard, 30000);
+                overlay.style.display = 'none';
+            }, 300);
         });
     </script>
+
 </body>
 </html>
