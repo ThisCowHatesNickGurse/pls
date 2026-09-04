@@ -1,0 +1,183 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!--
+Created by Alight Motion (http://alightmotion.com)
+Exported: 2026-09-03 03:56 PM
+6.2.44 (842)
+-->
+<scene title="Project Name 16" width="1440" height="1080" exportWidth="1440" exportHeight="1080" bgcolor="#FFD8D8D8" totalTime="14999" fps="30" modifiedTime="1788468996918" amver="842" ffver="107" am="com.alightcreative.motion/6.2.44" amplatform="ios" precompose="dynamicResolution" retime="freeze">
+  <media uri="am-internal:///314EADB78FA029E376AD901878DC90155B85B219.MP4" type="video/mp4" duration="18970" size="1516370" fps="29.99" infoUpdated="1788468633442" width="576" height="576"/>
+  <media uri="am-internal:///115FBD937A6D1F2C63A8901C76418667F42E3492.MP4" type="video/mp4" duration="21045" size="22094876" fps="54.18" infoUpdated="1788468633442"/>
+  <media uri="am-internal:///7E6D69F7F8FC0E5BB4AB882A0399989D459CAF1C.MP4" type="video/mp4" duration="338234" size="38486202" fps="24.01" infoUpdated="1788468633442" width="1280" height="720"/>
+  <media uri="am-internal:///971708E37CA043E3D5CF407ED451EF25D7A07B5D.PNG" type="image/png" size="736601" infoUpdated="1788468633442" width="1139" height="1381"/>
+  <media uri="am-internal:///E764B39D8EA5741436B36A3E0BB67489A1245D1B.PNG" type="image/png" size="151917" infoUpdated="1788468633442" width="1004" height="1080"/>
+  <media uri="am-internal:///E73F5A077AF1AF026B5A4960D968347D57C66C23.MP4" type="video/mp4" duration="20039" size="938972" fps="29.97" infoUpdated="1788468633442" width="1920" height="1080"/>
+  <bookmark t="834"/>
+  <shape id="4" hidden="true" startTime="0" endTime="14866" fillType="media" fillVideo="am-internal:///314EADB78FA029E376AD901878DC90155B85B219.MP4" mediaFillMode="fill" s=".rect">
+    <transform>
+      <location value="540.000000,540.000000,0.000000"/>
+      <scale value="1.115741,1.115741"/>
+    </transform>
+    <gain value="1.010000"/>
+    <property name="size" type="vec2" value="540.000000,540.000000"/>
+  </shape>
+  <shape id="5" startTime="0" endTime="3366" speed="1.6" fillType="media" fillVideo="am-internal:///115FBD937A6D1F2C63A8901C76418667F42E3492.MP4" inTime="11601" mediaFillMode="fill" s=".rect">
+    <transform>
+      <location value="720.000000,540.000000,0.000000"/>
+      <scale value="2.458333,2.458333"/>
+      <rotation value="-90.000008"/>
+    </transform>
+    <effect id="com.alightcreative.effects.pinchbulge2" locallyApplied="true">
+      <property name="radius" type="float" value="1.590000"/>
+      <property name="strength" type="float" value="-0.190000"/>
+    </effect>
+    <gain value="0.000000"/>
+    <property name="size" type="vec2" value="249.526062,540.000000"/>
+  </shape>
+  <shape id="6" startTime="3334" endTime="5166" speed="0.15" fillType="media" fillVideo="am-internal:///115FBD937A6D1F2C63A8901C76418667F42E3492.MP4" inTime="17841" mediaFillMode="fill" s=".rect">
+    <transform>
+      <location>
+        <kf t="0.000000" v="720.000000,540.000000,0.000000"/>
+        <kf t="0.914190" v="2673.333496,-830.999939,0.000000" e="cubicBezier 0.0 0.0 1.0 1.0"/>
+      </location>
+      <scale>
+        <kf t="0.000000" v="2.458333,2.458333"/>
+        <kf t="0.914190" v="8.399074,8.399074" e="cubicBezier 0.0 0.0 1.0 1.0"/>
+      </scale>
+      <rotation value="-90.000008"/>
+    </transform>
+    <effect id="com.alightcreative.effects.pinchbulge2" locallyApplied="true">
+      <property name="radius" type="float" value="1.590000"/>
+      <property name="strength" type="float" value="-0.190000"/>
+    </effect>
+    <gain value="0.000000"/>
+    <property name="size" type="vec2" value="249.526062,540.000000"/>
+  </shape>
+  <embedScene id="60" label="Group 2" startTime="5167" endTime="14866" fillType="intrinsic" outTime="9699">
+    <transform>
+      <location value="720.000000,540.000000,0.000000"/>
+      <scale>
+        <kf t="0.000000" v="1.088576,1.088576"/>
+        <kf t="0.996701" v="1.186714,1.186714" e="local cyclic 0.08789498 0.0 0.5 0.0 0.0"/>
+      </scale>
+    </transform>
+    <fillColor value="#FF000000"/>
+    <effect id="com.alightcreative.effects.pinchbulge2" locallyApplied="true">
+      <property name="radius" type="float" value="1.590000"/>
+      <property name="strength" type="float" value="-0.160000"/>
+    </effect>
+    <effect id="com.alightcreative.effects.brightcont2" locallyApplied="true">
+      <property name="brightness" type="float" value="0.050000"/>
+      <property name="contrast" type="float" value="0.270000"/>
+    </effect>
+    <effect id="com.alightcreative.effects.highlightshadow" locallyApplied="true">
+      <property name="highlights" type="float" value="0.000000"/>
+      <property name="shadows" type="float" value="0.570000"/>
+    </effect>
+    <scene title="" width="1988" height="1119" exportWidth="1920" exportHeight="1080" bgcolor="#00000000" totalTime="9699" fps="30" modifiedTime="0" amver="842" ffver="107" am="com.alightcreative.motion/6.2.44" amplatform="ios" precompose="dynamicResolution" retime="off">
+      <shape id="8" startTime="0" endTime="9699" fillType="media" fillVideo="am-internal:///7E6D69F7F8FC0E5BB4AB882A0399989D459CAF1C.MP4" inTime="77667" mediaFillMode="fill" s=".rect">
+        <transform>
+          <location value="993.499878,558.843689,0.000000"/>
+          <scale value="1.379861,1.379861"/>
+        </transform>
+        <gain value="0.000000"/>
+        <property name="size" type="vec2" value="720.000000,405.000000"/>
+      </shape>
+      <shape id="58" startTime="0" endTime="9699" fillType="media" fillImage="am-internal:///971708E37CA043E3D5CF407ED451EF25D7A07B5D.PNG" mediaFillMode="fill" s=".rect">
+        <transform>
+          <location value="1388.628296,816.766968,0.000000"/>
+          <scale value="0.367732,0.367732"/>
+          <rotation>
+            <kf t="0.000000" v="0.000000"/>
+            <kf t="0.996701" v="2000.000000"/>
+          </rotation>
+        </transform>
+        <effect id="com.alightcreative.effects.chromakey" locallyApplied="true">
+          <property name="keyColor" type="color" value="#FF466F4B"/>
+        </effect>
+        <property name="size" type="vec2" value="445.372925,540.000000"/>
+      </shape>
+      <shape id="12" startTime="0" endTime="9699" fillType="media" fillImage="am-internal:///E764B39D8EA5741436B36A3E0BB67489A1245D1B.PNG" mediaFillMode="fill" s=".rect">
+        <transform>
+          <location value="574.550781,708.382324,0.000000"/>
+          <scale value="0.550247,0.550247"/>
+        </transform>
+        <property name="size" type="vec2" value="434.307709,705.538269"/>
+      </shape>
+    </scene>
+  </embedScene>
+  <shape id="63" label="Rounded Rectangle 4" startTime="0" endTime="14966" fillType="color" s=".roundrect">
+    <transform>
+      <location value="-62.384636,540.000000,0.000000"/>
+    </transform>
+    <fillColor value="#FF000000"/>
+    <property name="size" type="vec2" value="106.769257,1197.230835"/>
+  </shape>
+  <shape id="64" label="Rounded Rectangle 4 Copy" startTime="0" endTime="14966" fillType="color" s=".roundrect">
+    <transform>
+      <location value="1520.384033,383.333374,0.000000"/>
+    </transform>
+    <fillColor value="#FF000000"/>
+    <property name="size" type="vec2" value="106.769257,1197.230835"/>
+  </shape>
+  <shape id="7" label="Rounded Rectangle 1" startTime="5034" endTime="7033" fillType="color" s=".roundrect">
+    <transform>
+      <location value="720.000000,540.000000,0.000000"/>
+      <opacity>
+        <kf t="0.000000" v="0.000000"/>
+        <kf t="0.050000" v="1.000000" e="cubicBezier 0.0 0.0 0.0 1.0"/>
+        <kf t="0.349833" v="0.000000" e="cubicBezier 0.0 0.0 1.0 1.0"/>
+      </opacity>
+    </transform>
+    <property name="size" type="vec2" value="882.153870,882.153870"/>
+  </shape>
+  <embedScene link="E7D34F4D-B293-4E9B-9A30-3B2367B3A72B" id="13" label="Group 1" startTime="5467" endTime="7132" fillType="intrinsic" blending="hard-light">
+    <transform>
+      <location value="542.769226,1439.692871,0.000000"/>
+      <opacity>
+        <kf t="0.000000" v="0.000000"/>
+        <kf t="0.180180" v="1.000000" e="cubicBezier 0.0 0.0 1.0 1.0"/>
+        <kf t="0.980781" v="0.000000"/>
+        <kf t="0.860661" v="1.000000"/>
+      </opacity>
+    </transform>
+    <scene title="Group 1" width="1080" height="1080" exportWidth="1920" exportHeight="1080" bgcolor="#00000000" totalTime="1666" fps="24" modifiedTime="1788467547853" amver="842" ffver="107" am="com.alightcreative.motion/6.2.44" amplatform="ios" precompose="dynamicResolution" type="element" retime="freeze">
+      <shape id="57" startTime="0" endTime="1666" speed="2.0" fillType="media" fillVideo="am-internal:///E73F5A077AF1AF026B5A4960D968347D57C66C23.MP4" inTime="4542" mediaFillMode="fill" s=".rect">
+        <transform>
+          <location value="144.404297,88.613342,0.000000"/>
+          <scale value="0.366663,0.366663"/>
+        </transform>
+        <effect id="com.alightcreative.effects.chromakey" locallyApplied="true">
+          <property name="feather" type="float" value="0.418000"/>
+          <property name="keyColor" type="color" value="#FF00FF02"/>
+          <property name="threshold" type="float" value="0.319600"/>
+        </effect>
+        <property name="size" type="vec2" value="540.000000,303.750000"/>
+      </shape>
+    </scene>
+  </embedScene>
+  <shape id="61" label="Rounded Rectangle 2" startTime="14600" endTime="14999" fillType="color" s=".roundrect">
+    <transform>
+      <location value="720.000000,540.000000,0.000000"/>
+      <scale>
+        <kf t="0.000000" v="1.000000,1.000000"/>
+      </scale>
+      <opacity>
+        <kf t="0.000000" v="0.000000"/>
+        <kf t="0.586466" v="1.000000"/>
+      </opacity>
+    </transform>
+    <fillColor value="#FF000000"/>
+    <property name="size" type="vec2" value="971.999878,972.000000"/>
+  </shape>
+  <shape id="62" label="Rounded Rectangle 3" startTime="0" endTime="1999" fillType="color" s=".roundrect">
+    <transform>
+      <location value="720.000000,540.000000,0.000000"/>
+      <opacity>
+        <kf t="0.000000" v="1.000000"/>
+        <kf t="0.050025" v="0.000000"/>
+      </opacity>
+    </transform>
+    <fillColor value="#FF000000"/>
+    <property name="size" type="vec2" value="1004.615417,1004.615417"/>
+  </shape>
+</scene>
